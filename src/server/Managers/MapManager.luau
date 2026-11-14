@@ -172,7 +172,7 @@ function MapManager.buildStatic()
 		local T = side.Transform
 		buildBase(map, T, side.Team)
 		for _, pos in MapLayout.Spawns do
-			makeSpawn(side.Team, T * CFrame.new(pos), spawns)
+			makeSpawn(side.Team, T * CFrame.new(pos) * CFrame.Angles(0, math.pi, 0), spawns) -- de frente para o centro
 		end
 		for _, t in MapLayout.Trees do
 			PropKit.tree(map, T * CFrame.new(t[1], 0, t[2]) * CFrame.Angles(0, t[1] % 3, 0), t[3])

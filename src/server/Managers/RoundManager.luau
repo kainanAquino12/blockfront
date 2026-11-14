@@ -91,9 +91,7 @@ local function resetForNewMatch()
 	CaptureManager.reset()
 	MapManager.buildDestructibles()
 	for _, p in Players:GetPlayers() do
-		task.spawn(function()
-			p:LoadCharacter()
-		end)
+		task.spawn(TeamManager.spawn, p)
 	end
 end
 
@@ -127,7 +125,7 @@ local function loop()
 	while true do
 		setState("Waiting")
 		match:SetAttribute("TimeLeft", 0)
-		while #Players:GetPlayers() < MatchConfig.MinPlayers do
+		while #TeamManager.getTeam("Blue"):GetPlayers() + #TeamManager.getTeam("Red"):GetPlayers() < MatchConfig.MinPlayers do
 			task.wait(1)
 		end
 		setState("Starting")

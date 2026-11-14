@@ -111,7 +111,7 @@ WeaponConfig.Viewmodel = {
 	Rifle = {
 		Scale = 0.4,
 		Hip = CFrame.new(0.44, -0.5, -1.6) * CFrame.Angles(0, rad(14), rad(-4)),
-		Aim = CFrame.new(0, -0.49, -1.0),
+		Aim = CFrame.new(0, -0.49, -1.3),
 		AimFov = 55,
 	},
 	RocketLauncher = {

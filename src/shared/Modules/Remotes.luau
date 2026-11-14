@@ -20,6 +20,7 @@ local EVENT_NAMES = {
 	"WeaponFire", -- cliente -> servidor: disparo/arremesso/golpe (validado no CombatManager)
 	"WeaponReload", -- cliente -> servidor: pedido de recarga
 	"CombatEvent", -- servidor -> clientes: tiros, foguetes, acertos, abates
+	"TeamSelect", -- cliente -> servidor: escolha de time ("Blue", "Red" ou "Auto")
 }
 
 local Remotes = {}

@@ -11,6 +11,7 @@ require(Controllers.ViewmodelController).init()
 require(Controllers.CombatEffects).init()
 require(Controllers.WeaponController).init()
 require(Controllers.UIController).init()
+require(Controllers.TeamSelectController).init()
 require(Controllers.DevController).init()
 
 print("[BLOCKFRONT] Cliente iniciado")

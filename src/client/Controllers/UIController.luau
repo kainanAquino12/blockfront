@@ -11,11 +11,14 @@
 	  direita     arma + munição + recarga
 	  canto       feed de eliminações
 	  centro      mira + marcador de acerto + notificações de conquista
+	  placar      segurar Tab (e automático no fim da partida)
 ]]
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
+local StarterGui = game:GetService("StarterGui")
+local UserInputService = game:GetService("UserInputService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local GameConfig = require(ReplicatedStorage.Shared.Config.GameConfig)
@@ -489,7 +492,130 @@ local function updateWeapon()
 	end
 end
 
+---------------------------------------------------------------------------
+-- Placar (segurar Tab)
+---------------------------------------------------------------------------
+
+local function buildScoreboard()
+	local board = panel({
+		Name = "Scoreboard",
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		Position = UDim2.fromScale(0.5, 0.5),
+		Size = UDim2.fromOffset(680, 440),
+		BackgroundTransparency = 0.08,
+		Visible = false,
+		Parent = gui,
+	})
+	refs.Scoreboard = board
+	label({
+		Position = UDim2.fromOffset(16, 12),
+		Size = UDim2.new(1, -32, 0, 28),
+		Text = "PLACAR",
+		Parent = board,
+	})
+	refs.BoardColumns = {}
+	for i, name in { "Blue", "Red" } do
+		local col = make("Frame", {
+			Position = UDim2.new((i - 1) * 0.5, if i == 1 then 16 else 8, 0, 52),
+			Size = UDim2.new(0.5, -24, 1, -68),
+			BackgroundTransparency = 1,
+			Parent = board,
+		})
+		local header = panel({
+			Size = UDim2.new(1, 0, 0, 40),
+			BackgroundColor3 = teamColor(name),
+			BackgroundTransparency = 0,
+			Parent = col,
+		})
+		local title = label({
+			Position = UDim2.fromOffset(10, 6),
+			Size = UDim2.new(0.6, -10, 1, -12),
+			TextXAlignment = Enum.TextXAlignment.Left,
+			Text = GameConfig.Teams[name].DisplayName,
+			Parent = header,
+		})
+		local score = label({
+			AnchorPoint = Vector2.new(1, 0),
+			Position = UDim2.new(1, -10, 0, 6),
+			Size = UDim2.new(0.4, -10, 1, -12),
+			TextXAlignment = Enum.TextXAlignment.Right,
+			Text = "0",
+			Parent = header,
+		})
+		label({
+			Position = UDim2.fromOffset(10, 46),
+			Size = UDim2.new(1, -20, 0, 16),
+			Font = THEME.FontBody,
+			TextColor3 = THEME.Muted,
+			TextXAlignment = Enum.TextXAlignment.Right,
+			Text = "ABATES   MORTES",
+			Parent = col,
+		})
+		local rows = make("Frame", {
+			Position = UDim2.fromOffset(0, 66),
+			Size = UDim2.new(1, 0, 1, -66),
+			BackgroundTransparency = 1,
+			Parent = col,
+		}, { make("UIListLayout", { Padding = UDim.new(0, 4), SortOrder = Enum.SortOrder.LayoutOrder }) })
+		refs.BoardColumns[name] = { title = title, score = score, rows = rows }
+	end
+end
+
+local function statOf(p: Player, name: string): number
+	local ls = p:FindFirstChild("leaderstats")
+	local v = ls and ls:FindFirstChild(name)
+	return if v and v:IsA("IntValue") then v.Value else 0
+end
+
+local function refreshScoreboard()
+	local match = ReplicatedStorage:FindFirstChild("Match")
+	for name, col in refs.BoardColumns do
+		col.score.Text = tostring(match and match:GetAttribute("Score" .. name) or 0)
+		for _, c in col.rows:GetChildren() do
+			if c:IsA("Frame") then
+				c:Destroy()
+			end
+		end
+		local list = {}
+		for _, p in Players:GetPlayers() do
+			if p.Team and p.Team.Name == name then
+				table.insert(list, p)
+			end
+		end
+		table.sort(list, function(a, b)
+			return statOf(a, "Abates") > statOf(b, "Abates")
+		end)
+		for i, p in list do
+			local row = panel({
+				Size = UDim2.new(1, 0, 0, 30),
+				LayoutOrder = i,
+				BackgroundColor3 = if p == player then THEME.PanelLight else THEME.Panel,
+				BackgroundTransparency = if p == player then 0 else 0.3,
+				Parent = col.rows,
+			})
+			label({
+				Position = UDim2.fromOffset(10, 6),
+				Size = UDim2.new(0.55, -10, 1, -12),
+				Font = THEME.FontBody,
+				TextXAlignment = Enum.TextXAlignment.Left,
+				Text = p.DisplayName,
+				Parent = row,
+			})
+			label({
+				AnchorPoint = Vector2.new(1, 0),
+				Position = UDim2.new(1, -10, 0, 6),
+				Size = UDim2.new(0.45, -10, 1, -12),
+				Font = THEME.Font,
+				TextXAlignment = Enum.TextXAlignment.Right,
+				Text = string.format("%d        %d", statOf(p, "Abates"), statOf(p, "Mortes")),
+				Parent = row,
+			})
+		end
+	end
+end
+
 function UIController.init()
+	StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.PlayerList, false)
 	gui = make("ScreenGui", {
 		Name = "MainHUD",
 		ResetOnSpawn = false,
@@ -502,6 +628,22 @@ function UIController.init()
 	buildWeaponPanel()
 	buildCrosshair()
 	buildFeedAndToasts()
+	buildScoreboard()
+
+	local boardAcc = 0
+	RunService.Heartbeat:Connect(function(dt)
+		local show = UserInputService:IsKeyDown(Enum.KeyCode.Tab) or (ReplicatedStorage.Match:GetAttribute("State") == "Ended")
+		refs.Scoreboard.Visible = show
+		if show then
+			boardAcc += dt
+			if boardAcc >= 0.5 then
+				boardAcc = 0
+				refreshScoreboard()
+			end
+		else
+			boardAcc = 1 -- atualiza na hora quando abrir de novo
+		end
+	end)
 
 	local match = ReplicatedStorage:WaitForChild("Match") :: Configuration
 	local lastOwner = match:GetAttribute("CaptureOwner") or ""

@@ -1,13 +1,17 @@
 --[[
 	TeamManager (servidor)
-	Cria as equipes Blue e Red, distribui jogadores de forma equilibrada
-	(sempre para a equipe com menos jogadores), cria o placar individual
-	(leaderstats: Abates/Mortes), veste cada personagem com um colete em
-	blocos na cor do time e coloca os personagens no grupo de colisão
+	Cria as equipes Blue e Red e cuida do ciclo de vida do jogador:
+	  - ao entrar, o jogador fica sem time e sem personagem até escolher
+	    no menu (TeamSelect); "Auto" escolhe a equipe com menos jogadores
+	  - o servidor recusa entrar numa equipe que ficaria com 2+ jogadores
+	    a mais que a outra (balanceamento)
+	  - nascimento e renascimento são feitos aqui (CharacterAutoLoads off),
+	    RespawnTime segundos depois da morte
+	Também cria o placar individual (leaderstats: Abates/Mortes), veste o
+	personagem com o colete do time e o coloca no grupo de colisão
 	"Characters" (fragmentos não colidem com jogadores).
 
-	O spawn por equipe é feito pelo próprio Roblox: cada SpawnLocation do
-	mapa tem TeamColor da equipe e Neutral = false (ver MapManager).
+	O ponto de nascimento vem das SpawnLocations do time (MapManager).
 ]]
 
 local Players = game:GetService("Players")
@@ -15,6 +19,9 @@ local Teams = game:GetService("Teams")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local GameConfig = require(ReplicatedStorage.Shared.Config.GameConfig)
+local Remotes = require(ReplicatedStorage.Shared.Modules.Remotes)
+
+local MAX_IMBALANCE = 1 -- uma equipe pode ter no máximo 1 jogador a mais
 
 local TeamManager = {}
 
@@ -60,8 +67,55 @@ function TeamManager.pickTeamForNewPlayer(): Team
 	return best
 end
 
-function TeamManager.assign(player: Player)
-	player.Team = TeamManager.pickTeamForNewPlayer()
+-- Pode entrar nesta equipe sem desequilibrar? (não conta o próprio jogador)
+function TeamManager.canJoin(player: Player, teamName: string): boolean
+	local target = teamsByName[teamName]
+	if not target then
+		return false
+	end
+	local counts = {}
+	for name, team in teamsByName do
+		local n = 0
+		for _, p in team:GetPlayers() do
+			if p ~= player then
+				n += 1
+			end
+		end
+		counts[name] = n
+	end
+	for name, n in counts do
+		if name ~= teamName and counts[teamName] + 1 > n + MAX_IMBALANCE then
+			return false
+		end
+	end
+	return true
+end
+
+-- Nasce agora (se tiver time). Usado na escolha de time, no renascimento
+-- e no reinício da partida.
+function TeamManager.spawn(player: Player)
+	if player.Parent and TeamManager.getTeamOf(player) then
+		player:LoadCharacter()
+	end
+end
+
+local function onTeamSelect(player: Player, choice: unknown)
+	if typeof(choice) ~= "string" then
+		return
+	end
+	local current = TeamManager.getTeamOf(player)
+	local teamName = choice :: string
+	if teamName == "Auto" then
+		teamName = TeamManager.pickTeamForNewPlayer().Name
+		if current then
+			return -- "Auto" só vale para quem ainda não tem time
+		end
+	end
+	if teamName == current or not TeamManager.canJoin(player, teamName) then
+		return
+	end
+	player.Team = teamsByName[teamName]
+	TeamManager.spawn(player)
 end
 
 local function setCharacterGroup(character: Model)
@@ -149,11 +203,19 @@ end
 
 local function onCharacterAdded(player: Player, character: Model)
 	setCharacterGroup(character)
+	local humanoid = character:WaitForChild("Humanoid") :: Humanoid
+	humanoid.Died:Connect(function()
+		task.delay(GameConfig.RespawnTime, function()
+			-- só renasce se ainda for o mesmo personagem (não trocou de time etc.)
+			if player.Character == character then
+				TeamManager.spawn(player)
+			end
+		end)
+	end)
 end
 
 local function onPlayerAdded(player: Player)
 	createLeaderstats(player)
-	TeamManager.assign(player)
 	player.CharacterAdded:Connect(function(c)
 		onCharacterAdded(player, c)
 	end)
@@ -171,7 +233,9 @@ function TeamManager.init()
 	for _, name in GameConfig.TeamOrder do
 		teamsByName[name] = ensureTeam(GameConfig.Teams[name])
 	end
+	Players.CharacterAutoLoads = false
 	Players.RespawnTime = GameConfig.RespawnTime
+	Remotes.get("TeamSelect").OnServerEvent:Connect(onTeamSelect)
 	Players.PlayerAdded:Connect(onPlayerAdded)
 	for _, p in Players:GetPlayers() do
 		onPlayerAdded(p)

@@ -21,7 +21,7 @@
     },
     "Players": {
       "$properties": {
-        "CharacterAutoLoads": true
+        "CharacterAutoLoads": false
       }
     },
     "Workspace": {

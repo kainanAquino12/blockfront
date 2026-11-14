@@ -53,8 +53,9 @@ Workspace (criado em runtime pelo MapManager)
 ReplicatedStorage.Remotes (criado em runtime por Remotes.init)
 ```
 
-Ainda não criados: TeamSelection (menu de escolha de time) e Scoreboard próprio
-(hoje o placar individual usa o leaderboard padrão do Roblox com Abates/Mortes).
+Interface: TeamSelectController (menu de times ao entrar e na tecla M; o servidor recusa
+desequilíbrio maior que 1 jogador) e placar próprio no Tab (UIController). O jogador só nasce
+depois de escolher o time; nascimento e renascimento são feitos pelo TeamManager.
 
 ## Combate
 
