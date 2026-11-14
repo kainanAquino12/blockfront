@@ -1,0 +1,3 @@
+# Ferramentas do projeto. Rode `rokit install` dentro desta pasta.
+[tools]
+rojo = "rojo-rbx/rojo@7.4.4"
