@@ -23,7 +23,7 @@ local WeaponConfig = require(ReplicatedStorage.Shared.Config.WeaponConfig)
 local MatchConfig = require(ReplicatedStorage.Shared.Config.MatchConfig)
 local Remotes = require(ReplicatedStorage.Shared.Modules.Remotes)
 local WeaponController = require(script.Parent.WeaponController)
-local CameraController = require(script.Parent.CameraController)
+local ViewmodelController = require(script.Parent.ViewmodelController)
 
 local player = Players.LocalPlayer
 
@@ -466,12 +466,12 @@ local function updatePlayer()
 		elseif ratio > 0.25 then Color3.fromRGB(250, 200, 70)
 		else THEME.Danger
 	refs.HealthText.Text = tostring(math.ceil(hp))
+	refs.Crosshair.Visible = hp > 0 and WeaponController.getState() ~= nil and not ViewmodelController.isAiming()
 end
 
 local function updateWeapon()
 	local s = WeaponController.getState()
 	refs.WeaponPanel.Visible = s ~= nil
-	refs.Crosshair.Visible = CameraController.isCombatMode()
 	if not s then
 		return
 	end

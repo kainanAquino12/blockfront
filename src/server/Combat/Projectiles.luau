@@ -99,6 +99,7 @@ function Projectiles.throwGrenade(owner: Player, weaponId: string, origin: Vecto
 	end
 	local handle = WeaponModels.build(weaponId)
 	handle.Name = "ThrownGrenade"
+	handle.Size = Vector3.new(0.5, 0.6, 0.5) -- caixa de colisão do corpo da granada
 	handle.CanCollide = true
 	handle.Massless = false
 	handle.CustomPhysicalProperties = PhysicalProperties.new(2, 0.6, 0.3)

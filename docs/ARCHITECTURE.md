@@ -30,6 +30,10 @@ src/server  -> ServerScriptService.Server
   Destruction/
     VoxelStructure.luau      estrutura destrutível = VoxelGrid + chunks renderizados
     PartPool.luau            reaproveitamento das Parts dos chunks
+  Map/
+    MapLayout.luau           layout do mapa "Vila Bloco" (lado azul; vermelho é espelhado)
+    StructureKit.luau        prédios, muros, barreiras, sacos de areia, caixotes em voxel
+    PropKit.luau             cenário estático: ruas, árvores, pedras, postes, bases, limites
   Combat/
     Projectiles.luau         foguetes (simulados por raycast) e granadas (física)
 
@@ -37,7 +41,8 @@ src/client  -> StarterPlayer.StarterPlayerScripts.Client
   ClientMain.client.luau     ÚNICO LocalScript; inicializa os controllers
   Controllers/
     DestructionEffects.luau  explosões e fragmentos cúbicos (somente visual)
-    CameraController.luau    câmera de ombro com mira no centro quando armado
+    CameraController.luau    primeira pessoa travada, mira no centro da tela
+    ViewmodelController.luau arma e braços em primeira pessoa (recuo, mira, recarga, golpe, arremesso)
     WeaponController.luau    entrada das armas, munição prevista, envio ao servidor
     CombatEffects.luau       traçantes, foguetes visuais, sons, golpe da marreta
     UIController.luau        HUD (placar, tempo, objetivo, vida, munição, feed, avisos)
@@ -132,3 +137,19 @@ Fragmentos não colidem entre si nem com personagens (grupos de colisão).
 Resultados do teste de 14/11/2026: explosões destroem 224 a 232 células por parede,
 o desmoronamento derrubou 292 células soltas, pedidos inválidos (NaN, preset inexistente,
 tipo errado) foram ignorados, e o servidor ficou a 60 FPS com 0,2 ms de Heartbeat.
+
+## Primeira pessoa
+
+O jogo é em primeira pessoa (`LockFirstPerson`, FOV 80). Cada cliente vê só o próprio
+viewmodel: o mesmo modelo em blocos da Tool, em escala menor, preso à câmera, com braços na cor
+do time. Os outros jogadores veem a Tool na mão do personagem. Botão direito mira (FOV 55,
+dispersão do rifle cai para 25%). Posições de cada arma na tela: `WeaponConfig.Viewmodel`.
+
+## Mapa "Vila Bloco"
+
+300 x 340 studs, simétrico (o lado vermelho é o azul girado 180°). Três rotas: galpão de
+2 andares à esquerda, avenida central com barreiras, casas à direita. Praça central com a área
+de captura, cercada por quatro prédios de esquina. Bases com muros estáticos, letreiro e
+bandeiras do time. 38 estruturas destrutíveis, cerca de 11,5 mil células em 1.274 Parts,
+servidor a 60 FPS na montagem. Prédios de 2 andares têm escada interna e laje; se as paredes
+caírem, o andar de cima desaba.

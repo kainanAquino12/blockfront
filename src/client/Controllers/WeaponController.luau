@@ -1,7 +1,8 @@
 --[[
 	WeaponController (cliente)
 	Entrada das armas: botão esquerdo dispara (segurar = automático no
-	rifle), R recarrega, 1-4 trocam de arma (hotbar padrão do Roblox).
+	rifle), botão direito mira, R recarrega, 1-4 trocam de arma (hotbar
+	padrão do Roblox). A arma visível em primeira pessoa é o viewmodel.
 
 	O cliente prevê munição e cadência para responder na hora, desenha o
 	próprio tiro imediatamente e envia WeaponFire ao servidor. O servidor
@@ -17,6 +18,7 @@ local WeaponConfig = require(ReplicatedStorage.Shared.Config.WeaponConfig)
 local Remotes = require(ReplicatedStorage.Shared.Modules.Remotes)
 local CameraController = require(script.Parent.CameraController)
 local CombatEffects = require(script.Parent.CombatEffects)
+local ViewmodelController = require(script.Parent.ViewmodelController)
 
 local player = Players.LocalPlayer
 local rng = Random.new()
@@ -121,11 +123,11 @@ local function fire()
 
 	local origin = head.Position
 	local direction = (aimPoint() - origin).Unit
-	local muzzle = tool:FindFirstChild("Muzzle", true) :: Attachment?
-	local muzzlePos = if muzzle then muzzle.WorldPosition else origin
+	local muzzlePos = ViewmodelController.getMuzzlePosition() or origin
 
 	if weapon.Kind == "Hitscan" then
-		direction = spread(direction, weapon.SpreadDegrees)
+		local spreadDeg = weapon.SpreadDegrees * (if ViewmodelController.isAiming() then 0.25 else 1)
+		direction = spread(direction, spreadDeg)
 		local result = workspace:Raycast(origin, direction * weapon.Range, aimParams())
 		local hitPos = if result then result.Position else origin + direction * weapon.Range
 		local claimed = nil
@@ -135,14 +137,20 @@ local function fire()
 				claimed = result.Instance
 			end
 		end
-		CombatEffects.playShot(weapon, muzzlePos, hitPos)
+		CombatEffects.playShot(weapon, muzzlePos, hitPos, true)
+		ViewmodelController.kick(weapon.Kind)
 		fireRemote:FireServer(weapon.Id, origin, direction, claimed)
 	elseif weapon.Kind == "Melee" then
-		CombatEffects.playSwing(tool)
-		CombatEffects.playSoundAt(weapon.Sounds.Fire, muzzlePos, 0.8)
+		ViewmodelController.swing()
+		CombatEffects.playSoundAt(weapon.Sounds.Fire, nil, 0.8)
+		fireRemote:FireServer(weapon.Id, origin, direction)
+	elseif weapon.Kind == "Throwable" then
+		ViewmodelController.throw()
+		CombatEffects.playSoundAt(weapon.Sounds.Fire, nil, 0.8)
 		fireRemote:FireServer(weapon.Id, origin, direction)
 	else
-		CombatEffects.playSoundAt(weapon.Sounds.Fire, muzzlePos, 0.9)
+		ViewmodelController.kick(weapon.Kind)
+		CombatEffects.playSoundAt(weapon.Sounds.Fire, nil, 0.9)
 		fireRemote:FireServer(weapon.Id, origin, direction)
 	end
 
@@ -159,7 +167,7 @@ local function unequip()
 	table.clear(toolConns)
 	tool, weapon = nil, nil
 	triggerDown = false
-	CameraController.setCombatMode(false)
+	ViewmodelController.setWeapon(nil)
 	changed:Fire()
 end
 
@@ -192,7 +200,7 @@ local function equip(t: Tool)
 	table.insert(toolConns, t:GetAttributeChangedSignal("Reserve"):Connect(function()
 		changed:Fire()
 	end))
-	CameraController.setCombatMode(true)
+	ViewmodelController.setWeapon(w.Id)
 	changed:Fire()
 end
 
@@ -227,6 +235,8 @@ function WeaponController.init()
 		if input.UserInputType == Enum.UserInputType.MouseButton1 then
 			triggerDown = true
 			fire()
+		elseif input.UserInputType == Enum.UserInputType.MouseButton2 then
+			ViewmodelController.setAiming(true)
 		elseif input.KeyCode == Enum.KeyCode.R then
 			requestReload()
 		end
@@ -234,6 +244,8 @@ function WeaponController.init()
 	UserInputService.InputEnded:Connect(function(input)
 		if input.UserInputType == Enum.UserInputType.MouseButton1 then
 			triggerDown = false
+		elseif input.UserInputType == Enum.UserInputType.MouseButton2 then
+			ViewmodelController.setAiming(false)
 		end
 	end)
 	RunService.RenderStepped:Connect(function()

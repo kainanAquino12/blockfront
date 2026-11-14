@@ -165,7 +165,7 @@ local function buildVisual()
 	disc.Name = "Zone"
 	disc.Shape = Enum.PartType.Cylinder
 	disc.Size = Vector3.new(0.2, cfg.Radius * 2, cfg.Radius * 2)
-	disc.CFrame = CFrame.new(cfg.Position + Vector3.new(0, 0.1, 0)) * CFrame.Angles(0, 0, math.rad(90))
+	disc.CFrame = CFrame.new(cfg.Position + Vector3.new(0, 0.34, 0)) * CFrame.Angles(0, 0, math.rad(90))
 	disc.Material = Enum.Material.SmoothPlastic
 	disc.Transparency = 0.55
 	disc.Anchored = true

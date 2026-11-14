@@ -3,7 +3,6 @@
 	  - traçantes do rifle (pool de Parts) e clarão no cano
 	  - foguetes desenhados localmente a partir do CombatEvent "Rocket"
 	  - sons de disparo, arremesso e golpe dos outros jogadores
-	  - animação local do golpe da marreta
 	O próprio tiro é desenhado na hora pelo WeaponController; os eventos do
 	servidor sobre o jogador local são ignorados para não duplicar.
 ]]
@@ -11,7 +10,6 @@
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local Debris = game:GetService("Debris")
-local TweenService = game:GetService("TweenService")
 local SoundService = game:GetService("SoundService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -77,7 +75,8 @@ local function muzzleFlash(position: Vector3)
 	Debris:AddItem(p, 0.05)
 end
 
-function CombatEffects.playShot(weapon, from: Vector3, to: Vector3)
+-- isLocal: tiro do próprio jogador (som 2D, sem atenuação por distância).
+function CombatEffects.playShot(weapon, from: Vector3, to: Vector3, isLocal: boolean?)
 	local p = table.remove(tracerPool) or newEffectPart()
 	local len = (to - from).Magnitude
 	p.Size = Vector3.new(0.08, 0.08, len)
@@ -94,19 +93,7 @@ function CombatEffects.playShot(weapon, from: Vector3, to: Vector3)
 		end
 	end)
 	muzzleFlash(from)
-	CombatEffects.playSoundAt(weapon.Sounds.Fire, from, 0.7)
-end
-
--- Golpe da marreta: gira a pegada da ferramenta e volta (só visual local).
-function CombatEffects.playSwing(tool: Tool)
-	local base = tool.Grip
-	local down = base * CFrame.Angles(math.rad(-80), 0, 0)
-	local info = TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
-	local t1 = TweenService:Create(tool, info, { Grip = down })
-	t1:Play()
-	t1.Completed:Once(function()
-		TweenService:Create(tool, TweenInfo.new(0.25), { Grip = base }):Play()
-	end)
+	CombatEffects.playSoundAt(weapon.Sounds.Fire, if isLocal then nil else from, 0.7)
 end
 
 local function buildRocketModel(): Model

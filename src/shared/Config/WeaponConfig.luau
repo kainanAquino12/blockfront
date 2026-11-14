@@ -99,6 +99,37 @@ WeaponConfig.Weapons = {
 	},
 }
 
+--[[
+	Viewmodel em primeira pessoa (espaço da câmera: X direita, Y cima, -Z frente).
+	Scale  escala do modelo na tela
+	Hip    posição da empunhadura sem mirar
+	Aim    posição mirando (botão direito); nil = arma sem mira
+	AimFov campo de visão ao mirar
+]]
+local rad = math.rad
+WeaponConfig.Viewmodel = {
+	Rifle = {
+		Scale = 0.4,
+		Hip = CFrame.new(0.44, -0.5, -1.6) * CFrame.Angles(0, rad(14), rad(-4)),
+		Aim = CFrame.new(0, -0.49, -1.0),
+		AimFov = 55,
+	},
+	RocketLauncher = {
+		Scale = 0.42,
+		Hip = CFrame.new(0.5, -0.55, -1.35) * CFrame.Angles(0, rad(12), rad(-3)),
+		Aim = CFrame.new(0, -0.68, -0.8),
+		AimFov = 55,
+	},
+	Grenade = {
+		Scale = 0.38,
+		Hip = CFrame.new(0.5, -0.5, -1.3) * CFrame.Angles(rad(10), rad(-15), 0),
+	},
+	Sledgehammer = {
+		Scale = 0.4,
+		Hip = CFrame.new(0.75, -0.95, -1.1) * CFrame.Angles(rad(-50), rad(-10), rad(25)),
+	},
+}
+
 -- Ordem no inventário (teclas 1-4).
 WeaponConfig.Loadout = { "Rifle", "RocketLauncher", "Grenade", "Sledgehammer" }
 

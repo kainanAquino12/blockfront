@@ -28,6 +28,11 @@
       "$properties": {
         "StreamingEnabled": true
       }
+    },
+    "Lighting": {
+      "$properties": {
+        "Technology": "Future"
+      }
     }
   }
 }
