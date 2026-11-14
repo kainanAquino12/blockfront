@@ -15,6 +15,7 @@ export type MaterialDef = {
 	MaxHealth: number,
 	Material: Enum.Material,
 	Color: Color3,
+	Transparency: number?, -- vidro
 }
 
 local MaterialConfig = {}
@@ -82,6 +83,70 @@ local list: { MaterialDef } = {
 		MaxHealth = 120,
 		Material = Enum.Material.SmoothPlastic,
 		Color = Color3.fromRGB(112, 150, 170),
+	},
+	{
+		Id = 10,
+		Name = "Glass",
+		MaxHealth = 5, -- qualquer tiro quebra
+		Material = Enum.Material.Glass,
+		Color = Color3.fromRGB(170, 214, 236),
+		Transparency = 0.45,
+	},
+	{
+		Id = 11,
+		Name = "SheetMetal",
+		MaxHealth = 150,
+		Material = Enum.Material.Metal,
+		Color = Color3.fromRGB(132, 146, 160),
+	},
+	{
+		Id = 12,
+		Name = "PlasterYellow",
+		MaxHealth = 45,
+		Material = Enum.Material.SmoothPlastic,
+		Color = Color3.fromRGB(240, 204, 120),
+	},
+	{
+		Id = 13,
+		Name = "PlasterGreen",
+		MaxHealth = 45,
+		Material = Enum.Material.SmoothPlastic,
+		Color = Color3.fromRGB(150, 196, 150),
+	},
+	{
+		Id = 14,
+		Name = "BarnWood",
+		MaxHealth = 30,
+		Material = Enum.Material.WoodPlanks,
+		Color = Color3.fromRGB(176, 64, 52),
+	},
+	{
+		Id = 15,
+		Name = "Military",
+		MaxHealth = 140,
+		Material = Enum.Material.Concrete,
+		Color = Color3.fromRGB(118, 128, 96),
+	},
+	{
+		Id = 16,
+		Name = "DarkBrick",
+		MaxHealth = 60,
+		Material = Enum.Material.Brick,
+		Color = Color3.fromRGB(150, 70, 58),
+	},
+	{
+		Id = 17,
+		Name = "Hay",
+		MaxHealth = 20,
+		Material = Enum.Material.Fabric,
+		Color = Color3.fromRGB(226, 196, 102),
+	},
+	{
+		Id = 18,
+		Name = "RoofGreen",
+		MaxHealth = 60,
+		Material = Enum.Material.Grass,
+		Color = Color3.fromRGB(96, 160, 80),
 	},
 }
 

@@ -104,7 +104,7 @@ local function runMatch()
 		local dt = RunService.Heartbeat:Wait()
 		t -= dt
 		acc += dt
-		if acc >= MatchConfig.Capture.TickInterval then
+		if acc >= MatchConfig.CaptureRules.TickInterval then
 			CaptureManager.step(acc)
 			acc = 0
 			match:SetAttribute("TimeLeft", math.max(0, math.ceil(t)))
@@ -152,8 +152,8 @@ function RoundManager.init()
 	CaptureManager.init(match)
 	CaptureManager.setCallbacks(function(teamName, points)
 		RoundManager.addScore(teamName, points)
-	end, function(newOwner, previous)
-		print(("[BLOCKFRONT] Área de captura: %s -> %s"):format(previous == "" and "neutra" or previous, newOwner == "" and "neutra" or newOwner))
+	end, function(pointId, newOwner, previous)
+		print(("[BLOCKFRONT] Ponto %s: %s -> %s"):format(pointId, previous == "" and "neutro" or previous, newOwner == "" and "neutro" or newOwner))
 	end)
 
 	task.spawn(loop)

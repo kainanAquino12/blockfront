@@ -11,13 +11,13 @@ DestructionConfig.VoxelSize = 1
 
 -- Lado de um chunk, em células. Um chunk é a unidade de reconstrução visual:
 -- quando uma célula muda, só o chunk dela é remontado.
-DestructionConfig.ChunkSize = 8
+DestructionConfig.ChunkSize = 16
 
 -- Servidor: intervalo (s) entre envios agrupados para os clientes.
 DestructionConfig.BatchInterval = 0.05
 
 -- Servidor: limite de chunks remontados por passo (o resto fica para o próximo).
-DestructionConfig.MaxChunkRebuildsPerStep = 32
+DestructionConfig.MaxChunkRebuildsPerStep = 10
 
 -- Servidor: limite de células examinadas por explosão (proteção contra raios absurdos).
 DestructionConfig.MaxCellsScannedPerExplosion = 20000

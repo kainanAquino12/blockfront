@@ -164,38 +164,38 @@ local function buildTop()
 		Parent = timer,
 	})
 
-	-- Objetivo
-	local obj = panel({
+	-- Objetivos: um selo por ponto de captura (A, B, C)
+	local row = make("Frame", {
 		AnchorPoint = Vector2.new(0.5, 0),
 		Position = UDim2.new(0.5, 0, 0, 58),
-		Size = UDim2.fromOffset(260, 30),
+		Size = UDim2.fromOffset(#MatchConfig.CapturePoints * 64, 34),
+		BackgroundTransparency = 1,
 		Parent = top,
-	})
-	local barBg = make("Frame", {
-		Position = UDim2.fromOffset(4, 4),
-		Size = UDim2.new(1, -8, 1, -8),
-		BackgroundColor3 = THEME.PanelLight,
-		BorderSizePixel = 0,
-		ClipsDescendants = true,
-		Parent = obj,
-	}, { corner(3) })
-	refs.CaptureFill = make("Frame", {
-		AnchorPoint = Vector2.new(0.5, 0),
-		Position = UDim2.new(0.5, 0, 0, 0),
-		Size = UDim2.new(0, 0, 1, 0),
-		BackgroundColor3 = THEME.Neutral,
-		BorderSizePixel = 0,
-		Parent = barBg,
-	})
-	refs.CaptureText = label({
-		Size = UDim2.new(1, -12, 1, -6),
-		Position = UDim2.fromOffset(6, 3),
-		Font = THEME.Font,
-		Text = "CENTRO · NEUTRO",
-		ZIndex = 2,
-		Parent = barBg,
-	})
-	make("UIStroke", { Thickness = 1.5, Color = Color3.new(0, 0, 0), Transparency = 0.4, Parent = refs.CaptureText })
+	}, { make("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, HorizontalAlignment = Enum.HorizontalAlignment.Center, Padding = UDim.new(0, 6), SortOrder = Enum.SortOrder.LayoutOrder }) })
+	refs.Points = {}
+	for i, def in MatchConfig.CapturePoints do
+		local pill = panel({ Size = UDim2.fromOffset(56, 34), LayoutOrder = i, Parent = row })
+		local bg = make("Frame", {
+			Position = UDim2.fromOffset(3, 3),
+			Size = UDim2.new(1, -6, 1, -6),
+			BackgroundColor3 = THEME.PanelLight,
+			BorderSizePixel = 0,
+			ClipsDescendants = true,
+			Parent = pill,
+		}, { corner(3) })
+		local fill = make("Frame", {
+			AnchorPoint = Vector2.new(0, 1),
+			Position = UDim2.fromScale(0, 1),
+			Size = UDim2.fromScale(1, 0),
+			BackgroundColor3 = THEME.Neutral,
+			BorderSizePixel = 0,
+			Parent = bg,
+		})
+		local text = label({ Size = UDim2.new(1, -8, 1, -6), Position = UDim2.fromOffset(4, 3), Text = def.Id, ZIndex = 2, Parent = bg })
+		make("UIStroke", { Thickness = 1.5, Color = Color3.new(0, 0, 0), Transparency = 0.3, Parent = text })
+		local stroke = make("UIStroke", { Thickness = 2, Color = Color3.new(1, 1, 1), Transparency = 1, Parent = pill })
+		refs.Points[def.Id] = { fill = fill, stroke = stroke }
+	end
 
 	-- Faixa de fase
 	refs.Banner = label({
@@ -434,23 +434,19 @@ local function updateMatch(match: Configuration)
 		refs.Banner.Text = ""
 	end
 
-	local value = match:GetAttribute("CaptureValue") or 0
-	local owner = match:GetAttribute("CaptureOwner") or ""
-	local cstate = match:GetAttribute("CaptureState") or "Idle"
-	local fill = refs.CaptureFill
-	fill.Size = UDim2.new(math.abs(value), 0, 1, 0)
-	fill.BackgroundColor3 = if value < 0 then THEME.Blue elseif value > 0 then THEME.Red else THEME.Neutral
-	local status
-	if cstate == "Contested" then
-		status = "DISPUTADO"
-	elseif owner ~= "" then
-		status = teamLabel(owner) .. " DOMINA"
-	elseif cstate == "Capturing" then
-		status = "CAPTURANDO"
-	else
-		status = "NEUTRO"
+	for _, def in MatchConfig.CapturePoints do
+		local r = refs.Points[def.Id]
+		local value = match:GetAttribute("Cap_" .. def.Id .. "_Value") or 0
+		local owner = match:GetAttribute("Cap_" .. def.Id .. "_Owner") or ""
+		local cstate = match:GetAttribute("Cap_" .. def.Id .. "_State") or "Idle"
+		r.fill.Size = UDim2.fromScale(1, math.abs(value))
+		r.fill.BackgroundColor3 = if value < 0 then THEME.Blue elseif value > 0 then THEME.Red else THEME.Neutral
+		r.stroke.Transparency = if cstate == "Contested" then 0 elseif cstate == "Capturing" then 0.5 else 1
+		r.stroke.Color = if cstate == "Contested" then THEME.Danger else Color3.new(1, 1, 1)
+		if owner ~= "" then
+			r.fill.Size = UDim2.fromScale(1, 1)
+		end
 	end
-	refs.CaptureText.Text = upper(MatchConfig.Capture.Name) .. " · " .. status
 end
 
 local function updatePlayer()
@@ -632,7 +628,8 @@ function UIController.init()
 
 	local boardAcc = 0
 	RunService.Heartbeat:Connect(function(dt)
-		local show = UserInputService:IsKeyDown(Enum.KeyCode.Tab) or (ReplicatedStorage.Match:GetAttribute("State") == "Ended")
+		local matchCfg = ReplicatedStorage:FindFirstChild("Match")
+		local show = UserInputService:IsKeyDown(Enum.KeyCode.Tab) or (matchCfg ~= nil and matchCfg:GetAttribute("State") == "Ended")
 		refs.Scoreboard.Visible = show
 		if show then
 			boardAcc += dt
@@ -646,22 +643,30 @@ function UIController.init()
 	end)
 
 	local match = ReplicatedStorage:WaitForChild("Match") :: Configuration
-	local lastOwner = match:GetAttribute("CaptureOwner") or ""
+	local lastOwners = {}
 	local lastState = match:GetAttribute("State")
 	match.AttributeChanged:Connect(function(name)
 		updateMatch(match)
-		if name == "CaptureOwner" then
-			local owner = match:GetAttribute("CaptureOwner") or ""
-			if owner ~= "" then
-				UIController.toast(teamLabel(owner) .. " CONQUISTOU O " .. upper(MatchConfig.Capture.Name), teamColor(owner))
-			elseif lastOwner ~= "" then
-				UIController.toast(upper(MatchConfig.Capture.Name) .. " NEUTRALIZADO", THEME.Neutral)
+		local pointId = string.match(name, "^Cap_(%w+)_Owner$")
+		if pointId then
+			local def
+			for _, d in MatchConfig.CapturePoints do
+				if d.Id == pointId then
+					def = d
+				end
 			end
-			lastOwner = owner
+			local owner = match:GetAttribute(name) or ""
+			local label = pointId .. " · " .. upper(def and def.Name or "")
+			if owner ~= "" then
+				UIController.toast(teamLabel(owner) .. " CONQUISTOU " .. label, teamColor(owner))
+			elseif lastOwners[pointId] and lastOwners[pointId] ~= "" then
+				UIController.toast(label .. " NEUTRALIZADO", THEME.Neutral)
+			end
+			lastOwners[pointId] = owner
 		elseif name == "State" then
 			local state = match:GetAttribute("State")
 			if state == "InProgress" and lastState ~= "InProgress" then
-				UIController.toast("CONQUISTE O " .. upper(MatchConfig.Capture.Name) .. "!")
+				UIController.toast("CONQUISTE OS PONTOS A, B E C!")
 			end
 			lastState = state
 		end

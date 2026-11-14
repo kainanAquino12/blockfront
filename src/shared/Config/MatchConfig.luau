@@ -9,9 +9,9 @@
 	  ScoreBlue      pontuação coletiva azul
 	  ScoreRed       pontuação coletiva vermelha
 	  Winner         "Blue" | "Red" | "Draw" | ""
-	  CaptureOwner   "Blue" | "Red" | ""
-	  CaptureValue   -1 (azul domina) .. 0 (neutro) .. 1 (vermelho domina)
-	  CaptureState   "Idle" | "Capturing" | "Contested"
+	  Cap_<Id>_Owner "Blue" | "Red" | ""   (Id = A, B, C)
+	  Cap_<Id>_Value -1 (azul domina) .. 0 (neutro) .. 1 (vermelho domina)
+	  Cap_<Id>_State "Idle" | "Capturing" | "Contested"
 ]]
 
 local RunService = game:GetService("RunService")
@@ -21,20 +21,23 @@ local MatchConfig = {}
 -- No Studio basta 1 jogador para testar; em servidor real, 2.
 MatchConfig.MinPlayers = if RunService:IsStudio() then 1 else 2
 MatchConfig.StartingTime = 5
-MatchConfig.MatchDuration = 300
+MatchConfig.MatchDuration = 600
 MatchConfig.EndedTime = 10
-MatchConfig.ScoreToWin = 250
+MatchConfig.ScoreToWin = 600
 
 MatchConfig.ScorePerKill = 3
 MatchConfig.ScorePerSecondHeld = 1
 
-MatchConfig.Capture = {
-	Name = "Centro",
-	Position = Vector3.new(0, 0, 0), -- a parede de tijolos corta a zona ao meio
+-- Pontos de captura (mapa "Front Bloco"). FlagOffset: posição do mastro em relação ao centro.
+MatchConfig.CapturePoints = {
+	{ Id = "A", Name = "Indústria", Position = Vector3.new(-200, 0, 0), Radius = 16, FlagOffset = Vector3.new(8, 0, 8) },
+	{ Id = "B", Name = "Praça", Position = Vector3.new(0, 0, 0), Radius = 18, FlagOffset = Vector3.new(0, 0, 0) },
+	{ Id = "C", Name = "Fazenda", Position = Vector3.new(215, 0, 0), Radius = 16, FlagOffset = Vector3.new(-8, 0, 8) },
+}
 
-	Radius = 14,
-	Height = 12, -- altura do cilindro de captura acima do piso
-	CaptureTime = 8, -- segundos para 1 jogador ir de neutro a dominado
+MatchConfig.CaptureRules = {
+	Height = 14, -- altura do cilindro de captura acima do chão
+	CaptureTime = 10, -- segundos para 1 jogador ir de neutro a dominado
 	ExtraPlayerBonus = 0.5, -- +50% de velocidade por jogador extra
 	MaxRateMultiplier = 2.5,
 	TickInterval = 0.2,

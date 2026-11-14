@@ -153,6 +153,8 @@ function VoxelStructure:RebuildChunk(ci: number)
 			* CFrame.new((box.x + box.w * 0.5) * vs, (box.y + box.h * 0.5) * vs, (box.z + box.d * 0.5) * vs)
 		part.Material = def.Material
 		part.Color = def.Color
+		part.Transparency = def.Transparency or 0
+		part.CastShadow = def.Transparency == nil
 		part.Parent = chunkModel
 	end
 

@@ -23,7 +23,7 @@ local player = Players.LocalPlayer
 local TeamSelectController = {}
 
 local MAX_IMBALANCE = 1
-local OVERVIEW = CFrame.lookAt(Vector3.new(-150, 110, -210), Vector3.new(0, 0, 0))
+local OVERVIEW = CFrame.lookAt(Vector3.new(-230, 170, -330), Vector3.new(0, 0, -40))
 
 local gui: ScreenGui
 local cards: { [string]: { button: TextButton, count: TextLabel, list: TextLabel, status: TextLabel } } = {}
@@ -274,7 +274,7 @@ function TeamSelectController.init()
 	-- centro do mapa para a vista aérea do menu não ficar vazia.
 	task.spawn(function()
 		pcall(function()
-			player:RequestStreamAroundAsync(Vector3.zero)
+			player:RequestStreamAroundAsync(Vector3.new(-60, 0, -120))
 		end)
 	end)
 

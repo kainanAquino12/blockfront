@@ -1,20 +1,24 @@
 --[[
 	MapManager (servidor)
-	Monta o mapa "Vila Bloco" (MapLayout) e o ambiente.
+	Monta o mapa "Front Bloco" (MapLayout) e o ambiente.
 
-	buildStatic()        piso, ruas, praça, bases, enfeites, limites, spawns,
+	buildStatic()        terreno, rio, ruas, cenário, limites, spawns e
 	                     iluminação. Criado uma vez.
 	buildDestructibles() construções voxel. Recriado a cada partida pelo
 	                     RoundManager (o mapa volta inteiro).
 
-	O layout descreve o lado azul; o lado vermelho é o mesmo layout girado
-	180° em torno do centro (MIRROR).
+	Espelhamento: o MapLayout descreve o lado azul; o vermelho é o mesmo
+	layout refletido no plano z = 0.
+	  - estruturas: o canto mínimo é refletido e o preenchimento é
+	    invertido no eixo z (portas na face S viram face N, etc.)
+	  - cenário: posição refletida; a "frente" (-Z local) também é
+	    refletida, então postes e semáforos continuam virados para a rua
 
 	Hierarquia no Workspace:
 	  Map                 cenário estático
 	  SpawnPoints         SpawnLocations por equipe
 	  DestructibleObjects estruturas voxel (DestructionManager)
-	  CapturePoints       área de captura (CaptureManager)
+	  CapturePoints       áreas de captura (CaptureManager)
 ]]
 
 local Lighting = game:GetService("Lighting")
@@ -28,12 +32,6 @@ local PropKit = require(MapFolder.PropKit)
 
 local MapManager = {}
 
-local MIRROR = CFrame.Angles(0, math.pi, 0)
-local SIDES = {
-	{ Team = "Blue", Transform = CFrame.identity },
-	{ Team = "Red", Transform = MIRROR },
-}
-
 local function folder(name: string): Folder
 	local f = workspace:FindFirstChild(name)
 	if f then
@@ -43,6 +41,69 @@ local function folder(name: string): Folder
 	nf.Name = name
 	nf.Parent = workspace
 	return nf
+end
+
+-- Reflexão de um CFrame de cenário no plano z = 0 (mantém a "frente").
+local function mirrorPropCF(cf: CFrame): CFrame
+	local p = cf.Position
+	local y = cf.YVector
+	local z = cf.ZVector
+	local y2 = Vector3.new(y.X, y.Y, -y.Z)
+	local z2 = Vector3.new(z.X, z.Y, -z.Z)
+	return CFrame.fromMatrix(Vector3.new(p.X, p.Y, -p.Z), y2:Cross(z2), y2, z2)
+end
+
+--[[
+	Cria o contexto de construção de um lado.
+	mode: "Blue" (como descrito), "Red" (espelhado) ou "Center" (como descrito,
+	estruturas com prefixo "Center").
+]]
+local function makeContext(mode: string, static: Instance, destructibles: Instance)
+	local mirrored = mode == "Red"
+	local teamDef = GameConfig.Teams[mode]
+	local ctx = {
+		static = static,
+		team = mode,
+		color = if teamDef then teamDef.Color else Color3.new(1, 1, 1),
+		displayName = if teamDef then teamDef.DisplayName else "",
+	}
+
+	function ctx.cf(x: number, y: number, z: number, yawDeg: number?): CFrame
+		local cf = CFrame.new(x, y, z) * CFrame.Angles(0, math.rad(yawDeg or 0), 0)
+		return if mirrored then mirrorPropCF(cf) else cf
+	end
+
+	function ctx.pos(x: number, y: number, z: number): Vector3
+		return if mirrored then Vector3.new(x, y, -z) else Vector3.new(x, y, z)
+	end
+
+	function ctx.struct(name: string, x: number, z: number, def, y: number?)
+		local origin, fill
+		if mirrored then
+			local sz = def.Size.Z
+			origin = CFrame.new(x, y or 0, -(z + sz))
+			local f = def.Fill
+			fill = function(a: number, b: number, c: number): number
+				return f(a, b, sz - 1 - c)
+			end
+		else
+			origin = CFrame.new(x, y or 0, z)
+			fill = def.Fill
+		end
+		DestructionManager.createStructure({
+			Name = mode .. "_" .. name,
+			Origin = origin,
+			Size = def.Size,
+			Fill = fill,
+			Parent = destructibles,
+		})
+	end
+
+	function ctx.yield()
+		task.wait()
+	end
+
+	return ctx
 end
 
 local function makeSpawn(teamName: string, cf: CFrame, parent: Instance)
@@ -64,154 +125,152 @@ local function makeSpawn(teamName: string, cf: CFrame, parent: Instance)
 	spawn.Parent = parent
 end
 
--- Base de uma equipe (no referencial do lado azul; T espelha para o vermelho).
-local function buildBase(parent: Instance, T: CFrame, teamName: string)
-	local team = GameConfig.Teams[teamName]
-	local color = team.Color
-	local base = Instance.new("Model")
-	base.Name = teamName .. "Base"
-	local function at(x: number, y: number, z: number): CFrame
-		return T * CFrame.new(x, y, z)
-	end
-	-- piso
-	PropKit.block(base, at(0, 0.15, -140), Vector3.new(80, 0.3, 36), PropKit.Colors.BaseFloor, Enum.Material.Concrete)
-	-- faixas na cor do time
-	PropKit.block(base, at(0, 0.32, -122.5), Vector3.new(80, 0.05, 1), color, nil, true)
-	PropKit.block(base, at(0, 0.32, -134), Vector3.new(30, 0.05, 1), color, nil, true)
-	-- muros estáticos (fundo e laterais), com faixa do time
-	local wallColor = Color3.fromRGB(86, 92, 104)
-	PropKit.block(base, at(0, 4, -158.5), Vector3.new(82, 8, 2), wallColor, Enum.Material.Concrete)
-	PropKit.block(base, at(-40.5, 4, -146), Vector3.new(2, 8, 25), wallColor, Enum.Material.Concrete)
-	PropKit.block(base, at(40.5, 4, -146), Vector3.new(2, 8, 25), wallColor, Enum.Material.Concrete)
-	PropKit.block(base, at(0, 6.5, -157.4), Vector3.new(82, 1.2, 0.2), color, nil, true)
-	PropKit.block(base, at(-39.4, 6.5, -146), Vector3.new(0.2, 1.2, 25), color, nil, true)
-	PropKit.block(base, at(39.4, 6.5, -146), Vector3.new(0.2, 1.2, 25), color, nil, true)
-	-- letreiro do time
-	local sign = PropKit.block(base, at(0, 11, -158.5), Vector3.new(26, 5, 1), Color3.fromRGB(26, 30, 40))
-	local gui = Instance.new("SurfaceGui")
-	gui.Face = Enum.NormalId.Front
-	gui.PixelsPerStud = 40
-	gui.Parent = sign
-	local text = Instance.new("TextLabel")
-	text.Size = UDim2.fromScale(1, 1)
-	text.BackgroundTransparency = 1
-	text.Font = Enum.Font.GothamBlack
-	text.TextScaled = true
-	text.TextColor3 = color
-	text.Text = team.DisplayName
-	text.Parent = gui
-	PropKit.block(base, at(-12, 4.5, -158.5), Vector3.new(1, 9, 1), wallColor)
-	PropKit.block(base, at(12, 4.5, -158.5), Vector3.new(1, 9, 1), wallColor)
-	PropKit.flag(base, at(-34, 0, -152), color)
-	PropKit.flag(base, at(34, 0, -152), color)
-	base.Parent = parent
-end
-
 local function applyEnvironment()
-	Lighting.ClockTime = 14.5
-	Lighting.GeographicLatitude = 35
-	Lighting.Brightness = 2.4
-	Lighting.Ambient = Color3.fromRGB(96, 100, 112)
-	Lighting.OutdoorAmbient = Color3.fromRGB(140, 146, 160)
-	Lighting.EnvironmentDiffuseScale = 0.6
-	Lighting.EnvironmentSpecularScale = 0.3
+	-- Fim de tarde dourado, puxando para o roxo no horizonte (referência visual do jogo).
+	Lighting.ClockTime = 16.9
+	Lighting.GeographicLatitude = 30
+	Lighting.Brightness = 2.6
+	Lighting.Ambient = Color3.fromRGB(104, 96, 120)
+	Lighting.OutdoorAmbient = Color3.fromRGB(150, 140, 170)
+	Lighting.EnvironmentDiffuseScale = 0.7
+	Lighting.EnvironmentSpecularScale = 0.35
 	Lighting.GlobalShadows = true
-	Lighting.ShadowSoftness = 0.3
+	Lighting.ShadowSoftness = 0.25
+	Lighting.ExposureCompensation = 0.1
 	for _, c in Lighting:GetChildren() do
 		if c:IsA("PostEffect") or c:IsA("Atmosphere") or c:IsA("Sky") then
 			c:Destroy()
 		end
 	end
 	local atmosphere = Instance.new("Atmosphere")
-	atmosphere.Density = 0.26
-	atmosphere.Offset = 0.1
-	atmosphere.Color = Color3.fromRGB(199, 220, 255)
-	atmosphere.Decay = Color3.fromRGB(110, 130, 170)
-	atmosphere.Glare = 0.2
-	atmosphere.Haze = 1.2
+	atmosphere.Density = 0.3
+	atmosphere.Offset = 0.15
+	atmosphere.Color = Color3.fromRGB(236, 200, 214)
+	atmosphere.Decay = Color3.fromRGB(120, 92, 160)
+	atmosphere.Glare = 0.35
+	atmosphere.Haze = 1.4
 	atmosphere.Parent = Lighting
 	local cc = Instance.new("ColorCorrectionEffect")
-	cc.Saturation = 0.18
-	cc.Contrast = 0.08
-	cc.Brightness = 0.02
+	cc.Saturation = 0.2
+	cc.Contrast = 0.1
+	cc.TintColor = Color3.fromRGB(255, 244, 240)
 	cc.Parent = Lighting
 	local bloom = Instance.new("BloomEffect")
-	bloom.Intensity = 0.35
-	bloom.Size = 24
-	bloom.Threshold = 1.4
+	bloom.Intensity = 0.45
+	bloom.Size = 26
+	bloom.Threshold = 1.3
 	bloom.Parent = Lighting
 	local rays = Instance.new("SunRaysEffect")
-	rays.Intensity = 0.04
-	rays.Spread = 0.6
+	rays.Intensity = 0.06
+	rays.Spread = 0.7
 	rays.Parent = Lighting
+
+	local terrain = workspace.Terrain
+	local clouds = terrain:FindFirstChildOfClass("Clouds") or Instance.new("Clouds")
+	clouds.Cover = 0.55
+	clouds.Density = 0.55
+	clouds.Color = Color3.fromRGB(255, 226, 232)
+	clouds.Parent = terrain
+	terrain.WaterColor = Color3.fromRGB(52, 120, 170)
+	terrain.WaterTransparency = 0.6
+	terrain.WaterReflectance = 0.4
+	terrain.WaterWaveSize = 0.1
+end
+
+local function buildGround(map: Instance)
+	local hx, hz = MapLayout.HalfX, MapLayout.HalfZ
+	local river = MapLayout.River
+	local C = PropKit.Colors
+	local depth = 10
+	local w0, w1 = -(hx + 40), river.X0
+	local e0, e1 = river.X1, hx + 40
+	PropKit.block(map, CFrame.new((w0 + w1) / 2, -depth / 2, 0), Vector3.new(w1 - w0, depth, (hz + 40) * 2), C.Grass, Enum.Material.Grass).Name = "Ground"
+	PropKit.block(map, CFrame.new((e0 + e1) / 2, -depth / 2, 0), Vector3.new(e1 - e0, depth, (hz + 40) * 2), C.Grass, Enum.Material.Grass).Name = "Ground"
+	PropKit.block(map, CFrame.new((river.X0 + river.X1) / 2, -river.Depth - 1, 0), Vector3.new(river.X1 - river.X0, 2, (hz + 40) * 2), C.Dirt, Enum.Material.Mud).Name = "Riverbed"
+	workspace.Terrain:FillBlock(
+		CFrame.new((river.X0 + river.X1) / 2, -river.Depth / 2 - 0.5, 0),
+		Vector3.new(river.X1 - river.X0, river.Depth - 1, (hz + 40) * 2),
+		Enum.Material.Water
+	)
+
+	-- Manchas de grama e terra para quebrar a uniformidade
+	local rng = Random.new(42)
+	for _ = 1, 70 do
+		local x = rng:NextNumber(-hx, hx)
+		if x < river.X0 - 12 or x > river.X1 + 12 then
+			local w, d = rng:NextNumber(16, 50), rng:NextNumber(16, 50)
+			PropKit.block(map, CFrame.new(x, 0.02, rng:NextNumber(-hz, hz)), Vector3.new(w, 0.05, d), if rng:NextNumber() < 0.75 then C.GrassDark else C.Dirt, Enum.Material.Grass, true)
+		end
+	end
+
+	-- Ruas
+	PropKit.road(map, Vector3.new(0, 0, 0), 600, 18, true) -- avenida central N-S
+	PropKit.road(map, Vector3.new(-82, 0, 0), 436, 14, false) -- boulevard até a ponte central
+	for _, z in { -160, -80, 80, 160 } do
+		PropKit.road(map, Vector3.new(0, 0, z), 224, 12, false)
+	end
+	for _, z in { -80, 80 } do
+		PropKit.road(map, Vector3.new(-205, 0, z), 190, 12, false) -- acesso industrial
+	end
+	for _, x in { -60, 60 } do
+		PropKit.road(map, Vector3.new(x, 0, 0), 400, 10, true)
+	end
+	-- estradas de terra no campo
+	PropKit.block(map, CFrame.new(232, 0.05, 0), Vector3.new(136, 0.1, 10), C.Dirt, Enum.Material.Ground, true)
+	for _, z in { -151, 151 } do
+		PropKit.block(map, CFrame.new(123, 0.05, z), Vector3.new(30, 0.1, 10), C.Dirt, Enum.Material.Ground, true)
+		PropKit.block(map, CFrame.new(220, 0.05, z), Vector3.new(120, 0.1, 10), C.Dirt, Enum.Material.Ground, true)
+	end
+	-- pátio industrial de concreto
+	PropKit.block(map, CFrame.new(-205, 0.06, 0), Vector3.new(150, 0.12, 60), Color3.fromRGB(150, 150, 156), Enum.Material.Concrete, true)
+
+	PropKit.boundary(map, hx, hz)
 end
 
 function MapManager.buildStatic()
 	local map = folder("Map")
 	local spawns = folder("SpawnPoints")
-	local hx, hz = MapLayout.HalfX, MapLayout.HalfZ
-	local C = PropKit.Colors
+	local scratch = Instance.new("Folder") -- estruturas não são criadas aqui
 
-	-- Chão: grama com manchas de tonalidade
-	PropKit.block(map, CFrame.new(0, -1, 0), Vector3.new(hx * 2 + 60, 2, hz * 2 + 60), C.Grass, Enum.Material.Grass).Name = "Ground"
-	local rng = Random.new(42)
-	for _ = 1, 26 do
-		local w, d = rng:NextNumber(14, 40), rng:NextNumber(14, 40)
-		PropKit.block(map, CFrame.new(rng:NextNumber(-hx, hx), 0.02, rng:NextNumber(-hz, hz)), Vector3.new(w, 0.05, d), C.GrassDark, Enum.Material.Grass, true)
-	end
+	buildGround(map)
 
-	-- Avenidas e caminhos
-	PropKit.road(map, Vector3.new(0, 0, 0), 236, 14, true)
-	PropKit.road(map, Vector3.new(0, 0, 0), 280, 12, false)
-	PropKit.block(map, CFrame.new(0, 0.12, 0), Vector3.new(44, 0.25, 44), C.Sidewalk, Enum.Material.Concrete).Name = "Plaza"
-	for _, x in { -70, 70 } do
-		PropKit.block(map, CFrame.new(x, 0.05, 0), Vector3.new(10, 0.1, 236), C.Dirt, Enum.Material.Ground, true)
-	end
-
-	for _, side in SIDES do
-		local T = side.Transform
-		buildBase(map, T, side.Team)
+	for _, mode in { "Blue", "Red" } do
+		local ctx = makeContext(mode, map, scratch)
+		ctx.struct = function() end -- estático apenas
 		for _, pos in MapLayout.Spawns do
-			makeSpawn(side.Team, T * CFrame.new(pos) * CFrame.Angles(0, math.pi, 0), spawns) -- de frente para o centro
-		end
-		for _, t in MapLayout.Trees do
-			PropKit.tree(map, T * CFrame.new(t[1], 0, t[2]) * CFrame.Angles(0, t[1] % 3, 0), t[3])
-		end
-		for _, r in MapLayout.Rocks do
-			PropKit.rock(map, T * CFrame.new(r[1], 0, r[2]) * CFrame.Angles(0, r[2] % 4, 0), r[3])
-		end
-		for _, l in MapLayout.Lamps do
-			PropKit.lamp(map, T * CFrame.new(l[1], 0, l[2]) * CFrame.Angles(0, if l[1] > 0 then math.pi / 2 else -math.pi / 2, 0))
-		end
-		local containerColors = { Color3.fromRGB(196, 92, 52), Color3.fromRGB(64, 120, 168), Color3.fromRGB(96, 140, 84), Color3.fromRGB(210, 170, 60) }
-		for i, c in MapLayout.Containers do
-			PropKit.container(map, T * CFrame.new(c[1], 0, c[2]) * CFrame.Angles(0, math.rad(c[3]), 0), containerColors[(i - 1) % #containerColors + 1])
-		end
-		for _, f in MapLayout.Fences do
-			PropKit.fence(map, (T * CFrame.new(f[1])).Position, (T * CFrame.new(f[2])).Position)
+			makeSpawn(mode, ctx.cf(pos.X, pos.Y, pos.Z, 180), spawns)
 		end
 	end
-
-	PropKit.boundary(map, hx, hz)
+	scratch:Destroy()
 	applyEnvironment()
 end
 
--- Estruturas destrutíveis. Chamado de novo a cada partida (mapa volta inteiro).
+local propsBuilt = false
+
+--[[
+	Estruturas destrutíveis. Chamado a cada partida (o mapa volta inteiro).
+	O MapLayout descreve estruturas e cenário juntos; o cenário vai para
+	Workspace.MapProps só na primeira vez (nas seguintes vai para uma pasta
+	temporária fora do Workspace e é descartado).
+]]
 function MapManager.buildDestructibles()
 	DestructionManager.reset()
 	local destructibles = folder("DestructibleObjects")
-	for _, side in SIDES do
-		for _, s in MapLayout.Structures do
-			DestructionManager.createStructure({
-				Name = side.Team .. "_" .. s.Name,
-				Origin = side.Transform * CFrame.new(s.At.X, 0, s.At.Y),
-				Size = s.Def.Size,
-				Fill = s.Def.Fill,
-				Parent = destructibles,
-			})
-		end
-		task.wait() -- reparte a montagem entre frames
+	local props: Instance
+	if propsBuilt then
+		props = Instance.new("Folder")
+	else
+		props = folder("MapProps")
 	end
+	for _, mode in { "Blue", "Red" } do
+		MapLayout.buildSide(makeContext(mode, props, destructibles))
+		task.wait()
+	end
+	MapLayout.buildCenter(makeContext("Center", props, destructibles))
+	if propsBuilt then
+		props:Destroy()
+	end
+	propsBuilt = true
 end
 
 function MapManager.init()

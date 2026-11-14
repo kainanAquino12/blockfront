@@ -76,7 +76,7 @@ local function spawnDebris(position: Vector3, materialId: number, voxelSize: num
 	local base = def and def.Color or Color3.new(0.6, 0.6, 0.6)
 	local shade = rng:NextNumber(0.8, 1.1)
 	p.Color = Color3.new(math.min(base.R * shade, 1), math.min(base.G * shade, 1), math.min(base.B * shade, 1))
-	p.Transparency = 0
+	p.Transparency = def and def.Transparency or 0
 	p.CFrame = CFrame.new(position)
 		* CFrame.Angles(rng:NextNumber(0, math.pi), rng:NextNumber(0, math.pi), rng:NextNumber(0, math.pi))
 	p.Anchored = false
