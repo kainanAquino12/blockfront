@@ -85,15 +85,17 @@ end
 --[[
 	Explosão autoritativa.
 	position: world space. radius: studs. damage: dano no centro (vida de célula).
+	kind: efeito visual nos clientes. "Explosion" (padrão) = explosão completa,
+	"Impact" = só fragmentos (tiros e golpes de marreta).
 	Retorna o número de células destruídas imediatamente (sem contar desmoronamento).
 ]]
-function DestructionManager.explode(position: Vector3, radius: number, damage: number): number
+function DestructionManager.explode(position: Vector3, radius: number, damage: number, kind: string?): number
 	assert(typeof(position) == "Vector3", "explode: position inválida")
 	if radius <= 0 or damage <= 0 or radius ~= radius or damage ~= damage then
 		return 0
 	end
 	stats.Explosions += 1
-	table.insert(pendingExplosions, { Position = position, Radius = radius })
+	table.insert(pendingExplosions, { Position = position, Radius = radius, Kind = kind or "Explosion" })
 
 	local total = 0
 	for _, s in structures do

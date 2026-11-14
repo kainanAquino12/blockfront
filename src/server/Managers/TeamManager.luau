@@ -1,8 +1,10 @@
 --[[
 	TeamManager (servidor)
 	Cria as equipes Blue e Red, distribui jogadores de forma equilibrada
-	(sempre para a equipe com menos jogadores) e coloca os personagens no
-	grupo de colisão "Characters" (fragmentos não colidem com jogadores).
+	(sempre para a equipe com menos jogadores), cria o placar individual
+	(leaderstats: Abates/Mortes), veste cada personagem com um colete em
+	blocos na cor do time e coloca os personagens no grupo de colisão
+	"Characters" (fragmentos não colidem com jogadores).
 
 	O spawn por equipe é feito pelo próprio Roblox: cada SpawnLocation do
 	mapa tem TeamColor da equipe e Neutral = false (ver MapManager).
@@ -76,11 +78,92 @@ local function setCharacterGroup(character: Model)
 	end)
 end
 
+-- Colete em blocos (peito + costas + ombreiras) na cor do time.
+local function addTeamVest(player: Player, character: Model)
+	local torso = character:WaitForChild("UpperTorso", 5) or character:FindFirstChild("Torso")
+	if not torso or not torso:IsA("BasePart") then
+		return
+	end
+	local teamName = TeamManager.getTeamOf(player)
+	local color = if teamName then GameConfig.Teams[teamName].Color else Color3.new(0.5, 0.5, 0.5)
+	local s = torso.Size
+	local vest = Instance.new("Model")
+	vest.Name = "TeamVest"
+	local pieces = {
+		{ Vector3.new(s.X * 0.9, s.Y * 0.8, 0.2), Vector3.new(0, -s.Y * 0.05, -s.Z / 2 - 0.08) }, -- peito
+		{ Vector3.new(s.X * 0.9, s.Y * 0.8, 0.2), Vector3.new(0, -s.Y * 0.05, s.Z / 2 + 0.08) }, -- costas
+		{ Vector3.new(0.45, 0.25, s.Z + 0.3), Vector3.new(-s.X * 0.33, s.Y / 2 + 0.05, 0) }, -- ombro esq.
+		{ Vector3.new(0.45, 0.25, s.Z + 0.3), Vector3.new(s.X * 0.33, s.Y / 2 + 0.05, 0) }, -- ombro dir.
+	}
+	for _, def in pieces do
+		local p = Instance.new("Part")
+		p.Size = def[1]
+		p.Color = color
+		p.Material = Enum.Material.SmoothPlastic
+		p.CanCollide = false
+		p.CanQuery = false
+		p.CanTouch = false
+		p.Massless = true
+		p.CFrame = torso.CFrame * CFrame.new(def[2])
+		local weld = Instance.new("WeldConstraint")
+		weld.Part0 = torso
+		weld.Part1 = p
+		weld.Parent = p
+		p.Parent = vest
+	end
+	vest.Parent = character
+end
+
+local function createLeaderstats(player: Player)
+	local stats = Instance.new("Folder")
+	stats.Name = "leaderstats"
+	local kills = Instance.new("IntValue")
+	kills.Name = "Abates"
+	kills.Parent = stats
+	local deaths = Instance.new("IntValue")
+	deaths.Name = "Mortes"
+	deaths.Parent = stats
+	stats.Parent = player
+end
+
+function TeamManager.resetStats()
+	for _, p in Players:GetPlayers() do
+		local stats = p:FindFirstChild("leaderstats")
+		if stats then
+			for _, v in stats:GetChildren() do
+				if v:IsA("IntValue") then
+					v.Value = 0
+				end
+			end
+		end
+	end
+end
+
+function TeamManager.addStat(player: Player, statName: string, amount: number)
+	local stats = player:FindFirstChild("leaderstats")
+	local v = stats and stats:FindFirstChild(statName)
+	if v and v:IsA("IntValue") then
+		v.Value += amount
+	end
+end
+
+local function onCharacterAdded(player: Player, character: Model)
+	setCharacterGroup(character)
+end
+
 local function onPlayerAdded(player: Player)
+	createLeaderstats(player)
 	TeamManager.assign(player)
-	player.CharacterAdded:Connect(setCharacterGroup)
+	player.CharacterAdded:Connect(function(c)
+		onCharacterAdded(player, c)
+	end)
+	-- O colete só pode ser soldado depois que o visual do avatar é aplicado,
+	-- porque aplicar a aparência troca as partes do corpo.
+	player.CharacterAppearanceLoaded:Connect(function(c)
+		addTeamVest(player, c)
+	end)
 	if player.Character then
-		setCharacterGroup(player.Character)
+		task.spawn(onCharacterAdded, player, player.Character)
 	end
 end
 

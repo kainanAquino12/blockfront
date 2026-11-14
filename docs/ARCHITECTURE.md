@@ -6,28 +6,41 @@
 src/shared  -> ReplicatedStorage.Shared
   Config/
     GameConfig.luau          equipes, respawn, DevTools, grupos de colisão
+    MatchConfig.luau         regras do modo Conquista (tempo, meta, área de captura)
+    WeaponConfig.luau        estatísticas, sons e validação das armas
     MaterialConfig.luau      materiais destrutíveis (vida, aparência)
     DestructionConfig.luau   todos os limites de performance da destruição
   Modules/
     VoxelGrid.luau           dados das células (buffers), dano esférico, apoio estrutural
     GreedyMesher.luau        funde células iguais em poucas caixas
     Remotes.luau             lista oficial de RemoteEvents (criados pelo servidor)
+    WeaponModels.luau        modelos das armas em blocos (sem assets externos)
 
 src/server  -> ServerScriptService.Server
   GameManager.server.luau    ÚNICO Script do servidor; inicializa os managers
   Managers/
-    TeamManager.luau         equipes Blue/Red, balanceamento, grupo de colisão dos personagens
+    TeamManager.luau         equipes, balanceamento, colete do time, Abates/Mortes
+    RoundManager.luau        ciclo da partida (Waiting/Starting/InProgress/Ended), pontuação
+    CaptureManager.luau      área de captura do modo Conquista
+    CombatManager.luau       validação de disparos, dano, munição, recarga, abates
+    LoadoutManager.luau      entrega das 4 armas a cada spawn
     DestructionManager.luau  autoridade da destruição, passo agrupado, envio aos clientes
     MapManager.luau          campo de testes (piso, spawns, paredes voxel)
     DevToolsManager.luau     explosões de teste validadas (somente Studio)
   Destruction/
     VoxelStructure.luau      estrutura destrutível = VoxelGrid + chunks renderizados
     PartPool.luau            reaproveitamento das Parts dos chunks
+  Combat/
+    Projectiles.luau         foguetes (simulados por raycast) e granadas (física)
 
 src/client  -> StarterPlayer.StarterPlayerScripts.Client
   ClientMain.client.luau     ÚNICO LocalScript; inicializa os controllers
   Controllers/
     DestructionEffects.luau  explosões e fragmentos cúbicos (somente visual)
+    CameraController.luau    câmera de ombro com mira no centro quando armado
+    WeaponController.luau    entrada das armas, munição prevista, envio ao servidor
+    CombatEffects.luau       traçantes, foguetes visuais, sons, golpe da marreta
+    UIController.luau        HUD (placar, tempo, objetivo, vida, munição, feed, avisos)
     DevController.luau       teclas G/H de teste (somente Studio)
 
 Workspace (criado em runtime pelo MapManager)
@@ -35,9 +48,30 @@ Workspace (criado em runtime pelo MapManager)
 ReplicatedStorage.Remotes (criado em runtime por Remotes.init)
 ```
 
-Próximos módulos, criados só quando a fase chegar (sem placeholders):
-RoundManager + CapturePoints (Fase 1/4, modo Conquista), CombatManager + WeaponController
-(Fase 3), UIController + MainHUD/Scoreboard/TeamSelection (Fase 5), CameraController.
+Ainda não criados: TeamSelection (menu de escolha de time) e Scoreboard próprio
+(hoje o placar individual usa o leaderboard padrão do Roblox com Abates/Mortes).
+
+## Combate
+
+O cliente envia só a intenção (`WeaponFire`: arma, origem, direção). O servidor confere fase da
+partida, arma equipada, cadência, munição (contada no servidor, publicada em atributos da Tool),
+origem perto da cabeça e direção válida, e só então faz o raycast/simulação e aplica dano.
+Rifle aceita "favor do atirador" limitado: se o servidor não viu o alvo por latência, o tiro vale
+quando o alvo está a até 4 studs da linha do disparo e nada bloqueia o caminho.
+Explosões ferem menos (35%) quem está atrás de uma estrutura. Sem fogo amigo; dano próprio reduzido.
+
+| Arma | Dano jogador | Dano estrutura | Alcance | Cadência | Munição |
+|---|---|---|---|---|---|
+| Rifle | 20 (cabeça x1,6) | 40, raio 0,9 | 400 | 0,1 s | 30 + 150, recarga 2 s |
+| Lança-foguetes | 110 (centro) | 320, raio 8 | 600 | 1 s | 1 + 5, recarga 2,5 s |
+| Granada | 95 (centro) | 240, raio 7 | arremesso | 1 s | 3 por vida, pavio 2,5 s |
+| Marreta | 55 | 220, raio 2,4 | 8 | 0,75 s | — |
+
+## Modo Conquista
+
+Área circular no centro (raio 14). Uma equipe sozinha dentro move a captura (8 s com 1 jogador,
+mais rápido com mais gente); as duas juntas = disputado. Dominar dá 1 ponto/s; abate dá 3.
+Partida de 5 min ou até 250 pontos. No fim, o mapa destrutível é reconstruído e todos renascem.
 
 ## 2. Sistema voxel
 

@@ -1,8 +1,8 @@
 --[[
 	MapManager (servidor)
-	Monta o campo de testes da Fase 2: piso, spawn de cada equipe e as
-	paredes voxel do protótipo de destruição. O mapa completo (Fase 4)
-	vai substituir buildTestRange por um layout de verdade.
+	Monta o campo de testes: piso, spawn de cada equipe e as paredes voxel.
+	O mapa completo (Fase 4) vai substituir este layout.
+	A área de captura é criada pelo CaptureManager (Workspace.CapturePoints).
 
 	Hierarquia criada no Workspace:
 	  Map                 piso e cenário estático
@@ -64,10 +64,10 @@ local function brickWallFill(sx: number, sy: number)
 	end
 end
 
-function MapManager.buildTestRange()
+-- Piso e spawns (não destrutíveis; criados uma vez).
+function MapManager.buildStatic()
 	local map = folder("Map")
 	local spawns = folder("SpawnPoints")
-	local destructibles = folder("DestructibleObjects")
 
 	local floor = Instance.new("Part")
 	floor.Name = "Floor"
@@ -81,6 +81,12 @@ function MapManager.buildTestRange()
 
 	makeSpawn("Blue", Vector3.new(0, 0.5, -70), spawns)
 	makeSpawn("Red", Vector3.new(0, 0.5, 70), spawns)
+end
+
+-- Estruturas destrutíveis. Chamado de novo a cada partida (mapa volta inteiro).
+function MapManager.buildDestructibles()
+	DestructionManager.reset()
+	local destructibles = folder("DestructibleObjects")
 
 	-- Três paredes de teste, uma por material, entre as bases.
 	DestructionManager.createStructure({
@@ -113,7 +119,8 @@ function MapManager.buildTestRange()
 end
 
 function MapManager.init()
-	MapManager.buildTestRange()
+	MapManager.buildStatic()
+	MapManager.buildDestructibles()
 end
 
 return MapManager

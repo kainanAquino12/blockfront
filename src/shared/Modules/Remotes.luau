@@ -17,6 +17,9 @@ local FOLDER_NAME = "Remotes"
 local EVENT_NAMES = {
 	"DestructionBatch", -- servidor -> clientes: células destruídas + explosões (agrupado)
 	"DevExplosionRequest", -- cliente -> servidor: explosão de teste (somente Studio)
+	"WeaponFire", -- cliente -> servidor: disparo/arremesso/golpe (validado no CombatManager)
+	"WeaponReload", -- cliente -> servidor: pedido de recarga
+	"CombatEvent", -- servidor -> clientes: tiros, foguetes, acertos, abates
 }
 
 local Remotes = {}

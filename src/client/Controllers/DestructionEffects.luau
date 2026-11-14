@@ -19,6 +19,8 @@ local GameConfig = require(ReplicatedStorage.Shared.Config.GameConfig)
 local DestructionConfig = require(ReplicatedStorage.Shared.Config.DestructionConfig)
 local MaterialConfig = require(ReplicatedStorage.Shared.Config.MaterialConfig)
 local Remotes = require(ReplicatedStorage.Shared.Modules.Remotes)
+local WeaponConfig = require(ReplicatedStorage.Shared.Config.WeaponConfig)
+local Debris = game:GetService("Debris")
 
 local cfg = DestructionConfig.Debris
 
@@ -150,6 +152,17 @@ local function playExplosion(position: Vector3, radius: number)
 	e.Position = position
 	e.Parent = workspace
 
+	local holder = Instance.new("Attachment")
+	holder.WorldPosition = position
+	holder.Parent = workspace.Terrain
+	local sound = Instance.new("Sound")
+	sound.SoundId = WeaponConfig.ExplosionSound
+	sound.Volume = 1
+	sound.RollOffMaxDistance = 600
+	sound.Parent = holder
+	sound:Play()
+	Debris:AddItem(holder, 4)
+
 	local flash = Instance.new("Part")
 	flash.Shape = Enum.PartType.Ball
 	flash.Anchored = true
@@ -182,7 +195,9 @@ local function onBatch(message)
 	end
 	local explosions = message.Explosions or {}
 	for _, e in explosions do
-		playExplosion(e.Position, e.Radius)
+		if e.Kind == "Explosion" then
+			playExplosion(e.Position, e.Radius)
+		end
 	end
 	for _, entry in message.Structures or {} do
 		if entry.Cells then
