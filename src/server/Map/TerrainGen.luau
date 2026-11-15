@@ -23,7 +23,7 @@
 
 local TerrainGen = {}
 
-TerrainGen.HalfX = 320
+TerrainGen.HalfX = 480 -- V6: expandido para oeste (porto) e leste (subúrbio)
 TerrainGen.HalfZ = 440
 TerrainGen.Floor = -16 -- fundo do terreno
 
@@ -51,6 +51,8 @@ TerrainGen.Pads = {
 	Industry = { -320, 0, -150, 142, 0, 24 },
 	Base = { -90, 330, 90, 440, 12, 40 },
 	Military = { 196, 0, 272, 44, 26, 26 },
+	Port = { -480, 0, -386, 172, 1, 16 }, -- V6: pátio do porto, além do canal
+	Suburb = { 352, 0, 470, 262, 5, 30 }, -- V6: planície do subúrbio a leste
 }
 
 -- Estradas: polilinhas { {x, |z|}, ... } (meio mapa; a outra metade é espelhada).
@@ -62,6 +64,21 @@ TerrainGen.Roads = {
 	{ Name = "LigacaoLeste", Width = 12, Points = { { 78, 0 }, { 196, 0 } } },
 	{ Name = "AnelSul", Width = 12, Points = { { -150, 126 }, { 78, 126 } } },
 	{ Name = "AcessoBase", Width = 14, Points = { { -60, 330 }, { 60, 330 } } },
+	-- V6
+	{ Name = "Porto", Width = 14, Points = { { -170, 150 }, { -480, 150 } } },
+	{ Name = "PortoSul", Width = 12, Points = { { -170, 300 }, { -480, 300 } } },
+	{ Name = "LesteSuburbio", Width = 12, Points = { { 272, 0 }, { 330, 24 }, { 474, 24 } } },
+	{ Name = "RuaSuburbio", Width = 12, Points = { { 404, 24 }, { 404, 330 } } },
+	{ Name = "MorroSuburbio", Width = 10, Points = { { 70, 300 }, { 250, 330 }, { 404, 330 } } },
+}
+
+-- V6: canal com água de norte a sul a oeste da indústria (pontes nas estradas do porto)
+TerrainGen.Canal = { X = -365, HalfWidth = 16, Bottom = -8, Water = -2 }
+
+-- V6: crateras de impacto { x, |z|, raio, profundidade }
+TerrainGen.Craters = {
+	{ -60, 222, 7, 2.5 }, { 110, 160, 6, 2 }, { -212, 232, 8, 3 }, { 380, 120, 7, 2.5 },
+	{ 430, 240, 6, 2 }, { -20, 292, 6, 2 }, { 262, 252, 7, 2.5 }, { 300, 90, 6, 2 },
 }
 
 TerrainGen.Valley = { Z = 185, HalfWidth = 16, Depth = 7 }
@@ -95,7 +112,7 @@ local function baseHeight(x: number, az: number): number
 	hills = math.max(hills, 0.5)
 
 	-- cume leste: sobe até +20 em x ~ 230, some perto dos limites
-	local ridgeK = smoothstep(105, 200, x) * (1 - smoothstep(290, 320, x))
+	local ridgeK = smoothstep(105, 200, x) * (1 - smoothstep(296, 362, x))
 	local ridgeZ = 1 - smoothstep(120, 300, az)
 	local ridge = TerrainGen.RidgeHeight * ridgeK * ridgeZ + 2.5 * math.noise(x / 25, az / 25, 2.2) * ridgeK
 	local h = math.max(hills, ridge)
@@ -169,7 +186,27 @@ end
 local function rawHeight(x: number, az: number): (number, string?)
 	local h = baseHeight(x, az)
 	local hh, pad = padBlend(x, az, h)
-	return hh - trenchDepth(x, az), pad
+	hh -= trenchDepth(x, az)
+	-- crateras
+	for _, c in TerrainGen.Craters do
+		local d = math.sqrt((x - c[1]) ^ 2 + (az - c[2]) ^ 2)
+		if d < c[3] * 1.3 then
+			if d < c[3] then
+				hh -= c[4] * (1 - (d / c[3]) ^ 2)
+			else
+				hh += 0.6 * math.sin((d - c[3]) / (c[3] * 0.3) * math.pi) -- borda levantada
+			end
+		end
+	end
+	-- canal (depois dos platôs: corta qualquer coisa)
+	local cn = TerrainGen.Canal
+	local dc = math.abs(x - cn.X)
+	if dc < cn.HalfWidth then
+		local k = math.cos(dc / cn.HalfWidth * math.pi * 0.5)
+		k = math.min(1, k * 1.6)
+		hh = hh + (cn.Bottom - hh) * k
+	end
+	return hh, pad
 end
 
 --[[
@@ -184,8 +221,11 @@ function TerrainGen.sample(x: number, z: number): (number, string)
 	local kind = "Natural"
 	if pad == "Center" or pad == "Base" then
 		kind = "Urban"
-	elseif pad == "Industry" or pad == "Military" then
+	elseif pad == "Industry" or pad == "Military" or pad == "Port" then
 		kind = "Yard"
+	end
+	if math.abs(x - TerrainGen.Canal.X) < TerrainGen.Canal.HalfWidth then
+		kind = "Canal"
 	end
 	if road and d < 6 then
 		-- altura do eixo, média de 3 amostras ao longo (suaviza)
@@ -201,6 +241,10 @@ function TerrainGen.sample(x: number, z: number): (number, string)
 		if onBridge then
 			-- o chão continua sendo a vala; a ponte é uma estrutura
 			return h, "Valley"
+		end
+		local cn = TerrainGen.Canal
+		if math.abs(axis.X - cn.X) < cn.HalfWidth + 2 then
+			return h, "Canal"
 		end
 		local k = 1 - smoothstep(0, 6, d)
 		h = h + (ah - h) * k
@@ -218,6 +262,14 @@ end
 function TerrainGen.height(x: number, z: number): number
 	local h = TerrainGen.sample(x, z)
 	return h
+end
+
+-- Altura da pista sobre o canal (estrada em z = zRoad).
+function TerrainGen.canalDeckHeight(zRoad: number): number
+	local c = TerrainGen.Canal
+	local a = TerrainGen.height(c.X - c.HalfWidth - 4, zRoad)
+	local b = TerrainGen.height(c.X + c.HalfWidth + 4, zRoad)
+	return math.max(a, b)
 end
 
 -- Altura da pista no eixo da ponte sobre a vala (para posicionar pontes).
@@ -250,7 +302,7 @@ local function materialFor(kind: string, slope: number, x: number, z: number): E
 		return Enum.Material.Pavement
 	elseif kind == "Yard" then
 		return Enum.Material.Concrete
-	elseif kind == "Valley" then
+	elseif kind == "Valley" or kind == "Canal" then
 		return Enum.Material.Mud
 	end
 	if slope > 0.55 then
@@ -320,6 +372,8 @@ function TerrainGen.build(): number
 				local x = -hx + (i + 0.5) * RES
 				local z = -hz + (j + 0.5) * RES
 				local surf = materialFor(kind, slope, x, z)
+				local cn = TerrainGen.Canal
+				local water = if math.abs(x - cn.X) < cn.HalfWidth + 2 then cn.Water else nil
 				for b = 1, ny do
 					local cellBottom = y0 + (b - 1) * RES
 					local fill = math.clamp((h - cellBottom) / RES, 0, 1)
@@ -327,6 +381,9 @@ function TerrainGen.build(): number
 						local top = h - cellBottom < RES * 1.5
 						mcol[b][j + 1] = if top then surf elseif cellBottom > h - 8 then Enum.Material.Ground else Enum.Material.Rock
 						ocol[b][j + 1] = fill
+					elseif water and cellBottom < water then
+						mcol[b][j + 1] = Enum.Material.Water
+						ocol[b][j + 1] = math.clamp((water - cellBottom) / RES, 0, 1)
 					else
 						mcol[b][j + 1] = Enum.Material.Air
 						ocol[b][j + 1] = 0

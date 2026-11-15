@@ -136,11 +136,12 @@ local function applyEnvironment()
 	-- Direção V3 "stylized military voxel": tarde clara, sol baixo lateral para
 	-- marcar os volumes das fachadas, cores pouco saturadas e neblina leve que
 	-- encurta as linhas de visão muito longas sem escurecer o combate.
-	Lighting.ClockTime = 15.6
+	-- V6: céu fechado de zona de guerra (sem assets externos)
+	Lighting.ClockTime = 16.3
 	Lighting.GeographicLatitude = 38
-	Lighting.Brightness = 1.9
+	Lighting.Brightness = 1.6
 	Lighting.Ambient = Color3.fromRGB(70, 72, 78)
-	Lighting.OutdoorAmbient = Color3.fromRGB(118, 120, 126)
+	Lighting.OutdoorAmbient = Color3.fromRGB(108, 108, 112)
 	Lighting.EnvironmentDiffuseScale = 0.8
 	Lighting.EnvironmentSpecularScale = 0.4
 	Lighting.GlobalShadows = true
@@ -152,16 +153,16 @@ local function applyEnvironment()
 		end
 	end
 	local atmosphere = Instance.new("Atmosphere")
-	atmosphere.Density = 0.36
+	atmosphere.Density = 0.42
 	atmosphere.Offset = 0.05
-	atmosphere.Color = Color3.fromRGB(196, 196, 192)
-	atmosphere.Decay = Color3.fromRGB(128, 122, 116)
+	atmosphere.Color = Color3.fromRGB(178, 176, 170)
+	atmosphere.Decay = Color3.fromRGB(112, 102, 94)
 	atmosphere.Glare = 0.1
-	atmosphere.Haze = 1.6
+	atmosphere.Haze = 2.3
 	atmosphere.Parent = Lighting
 	local cc = Instance.new("ColorCorrectionEffect")
-	cc.Saturation = -0.12
-	cc.Contrast = 0.12
+	cc.Saturation = -0.18
+	cc.Contrast = 0.15
 	cc.Brightness = 0
 	cc.TintColor = Color3.fromRGB(255, 250, 242)
 	cc.Parent = Lighting
@@ -177,9 +178,9 @@ local function applyEnvironment()
 
 	local terrain = workspace.Terrain
 	local clouds = terrain:FindFirstChildOfClass("Clouds") or Instance.new("Clouds")
-	clouds.Cover = 0.62
-	clouds.Density = 0.45
-	clouds.Color = Color3.fromRGB(226, 224, 220)
+	clouds.Cover = 0.84
+	clouds.Density = 0.62
+	clouds.Color = Color3.fromRGB(176, 174, 170)
 	clouds.Parent = terrain
 	terrain.WaterColor = Color3.fromRGB(58, 74, 70)
 	terrain.WaterTransparency = 0.75
@@ -257,6 +258,45 @@ local propsBuilt = false
 	Workspace.MapProps só na primeira vez (nas seguintes vai para uma pasta
 	temporária fora do Workspace e é descartado).
 ]]
+--[[
+	Organização no Explorer: as estruturas vão para subpastas por distrito
+	dentro de DestructibleObjects (o nome da pasta-mãe é usado por scripts
+	e não muda).
+]]
+local DISTRICTS = {
+	{ "Map_Bridges", { "Ponte" } },
+	{ "Map_CentralDistrict", { "Torre", "Edificio", "PredioAbandonado" } },
+	{ "Map_IndustrialZone", { "Industrial", "Porto" } },
+	{ "Map_SuburbsAndTrenches", { "Suburbio", "Trincheira", "QG", "Campo" } },
+	{ "Map_SpawnAndObjectives", { "Base" } },
+}
+local function organizeDistricts(destructibles: Instance)
+	local folders = {}
+	for _, d in DISTRICTS do
+		local f = destructibles:FindFirstChild(d[1]) or Instance.new("Folder")
+		f.Name = d[1]
+		f.Parent = destructibles
+		folders[d[1]] = f
+	end
+	for _, m in destructibles:GetChildren() do
+		if m:IsA("Model") then
+			for _, d in DISTRICTS do
+				local hit = false
+				for _, key in d[2] do
+					if string.find(m.Name, key, 1, true) then
+						hit = true
+						break
+					end
+				end
+				if hit then
+					m.Parent = folders[d[1]]
+					break
+				end
+			end
+		end
+	end
+end
+
 function MapManager.buildDestructibles()
 	DestructionManager.reset()
 	local destructibles = folder("DestructibleObjects")
@@ -271,6 +311,7 @@ function MapManager.buildDestructibles()
 		task.wait()
 	end
 	MapLayout.buildCenter(makeContext("Center", props, destructibles))
+	organizeDistricts(destructibles)
 	task.wait()
 	buildDemoBuilding(destructibles)
 	if propsBuilt then

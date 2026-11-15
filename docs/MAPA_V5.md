@@ -82,3 +82,36 @@ Cada objetivo tem pelo menos 3 caminhos:
 - Percorrer as escadas de todos os prédios com o personagem.
 - QG Militar e pontes: o colapso não foi testado individualmente.
 - Vegetação/veículos no estilo novo: nenhum colocado (por decisão, o mapa ficou limpo).
+
+
+---
+
+## V6: expansão do mapa (2026-11-15)
+
+Mapa ampliado de 640 x 880 para **960 x 880 studs** (x ±480). Nada do mapa V5 foi removido.
+
+| Região nova | Coordenadas | O que tem |
+|---|---|---|
+| Canal | x = -365 (32 de largura, água em y -2) | 2 pontes destrutíveis por lado (z = ±150 e ±300), atravessando no eixo x |
+| Porto | x -478..-383, z -80..79 | armazém de concreto (34 x 96, lanternim, doca, escritório de 2 andares), pórtico de carga de aço (30 de altura), 2 baterias de 3 silos com passarela |
+| Subúrbio / linha de frente | x 330..480 | planície (+5), prédio de 4 andares por lado, muros baixos, sacos de areia, crateras |
+| Centro | — | Edifício Residencial de 8 andares por lado (x -135..-101, z ±70..±104), prédio residencial **abandonado** de 7 andares no eixo (x -122..-88) com a quina desabada e entulho |
+| Estradas | — | Porto, PortoSul, LesteSuburbio, RuaSuburbio, MorroSuburbio |
+| Clima | — | céu fechado, neblina mais densa, saturação -0.18, colunas de fumaça, pilhas de entulho |
+
+Explorer: as estruturas ficam em subpastas por distrito dentro de `DestructibleObjects`
+(`Map_CentralDistrict`, `Map_IndustrialZone`, `Map_SuburbsAndTrenches`, `Map_Bridges`, `Map_SpawnAndObjectives`).
+A pasta-mãe não foi renomeada porque o combate e a destruição procuram por ela.
+
+### Validação (Studio, Play Solo)
+
+1. Mapa antigo: torres, Administrativo, Industrial, QG, pontes da vala e spawns continuam iguais; spawn azul ok.
+2. Regiões conectadas por estrada (porto pelas pontes do canal; subúrbio pela estrada do cume e pela do morro).
+3. Acesso: subi a escada do Edifício Administrativo com teclado real (térreo -> 1º andar, y 7,2 -> 15,2).
+4. A, B e C: os três entram em "Capturing" com o jogador dentro.
+5. Movimento: andar e subir escada ok.
+6. Desempenho: ~18,8 mil Parts no total; servidor ocioso 16,7 ms; colapso de 4 pilares do Residencial
+   (160 elementos, 311 corpos): médio 16,7 ms, pior 39 ms. Cliente no Studio: ~15 FPS olhando o mapa de longe.
+7. Destruição: nenhum elemento sem apoio no projeto em nenhuma construção nova; colapso testado no Residencial.
+
+Pendências: teste com 2+ jogadores; FPS do cliente fora do Studio; pontes do canal e porto não foram derrubados em teste.

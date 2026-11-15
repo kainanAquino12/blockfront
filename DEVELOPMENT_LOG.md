@@ -94,3 +94,12 @@ Plano e resultados: `docs/MAPA_V5.md`. Prints: `docs/prints_v5/`.
 Arquivos novos: `server/Map/TerrainGen.luau`, `server/Map/Buildings/{EdificioAdministrativo,ComplexoIndustrial,QGMilitar,Ponte}.luau`.
 Reescritos: `server/Map/MapLayout.luau`. Modificados: `MapManager` (buildGround, ctx.struct com elementos), `BuildingKit`,
 `EdificioCentral` (andares por parâmetro), `StructuralGraph`, `MatchConfig` (pontos), `GameConfig`, `DevToolsManager`.
+
+
+## 2026-11-15 — V6: expansão do mapa
+
+Detalhes em `docs/MAPA_V5.md` (seção V6). Prints em `docs/prints_v6/`.
+Novos: `Buildings/EdificioResidencial.luau` (com opções Floors/Wall/Damaged), `Buildings/Porto.luau`, `BuildingKit.swapXZ`.
+Modificados: `TerrainGen` (x ±480, canal com água, porto, subúrbio, crateras, estradas), `MapLayout` (expansão, entulho, fumaça),
+`MapManager` (iluminação de zona de guerra, pastas por distrito), `UIController` (espera o Match por até 120 s:
+o servidor leva ~5 s para gerar o terreno grande).

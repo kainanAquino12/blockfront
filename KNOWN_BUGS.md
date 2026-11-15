@@ -41,6 +41,12 @@ Lista só o que foi observado ou pode ser verificado no código. Nada aqui foi i
 17. **Colapso do QG Militar e das pontes** não testado individualmente.
 18. **Rodada nova reconstrói todas as estruturas** (inclusive as 5 grandes); medido 0,5 s no Edit, não medido em servidor cheio.
 
+## V6 (expansão)
+
+19. **Geração do terreno no servidor ~5 s** (Play Solo). O cliente espera o Match por até 120 s.
+20. **FPS do cliente no Studio ~15** com o mapa inteiro à vista (não medido fora do Studio).
+21. **Colapso do porto, dos silos e das pontes do canal** não foi testado.
+
 ## Riscos e limitações (não testados)
 
 - **Multijogador nunca testado** com 2 ou mais jogadores reais: abate, feed, balanceamento, replicação de tiros e fragmentos.

@@ -195,4 +195,36 @@ function BuildingKit:stairCore(x0: number, z0: number, levels: { number }, opts:
 	end
 end
 
+--[[
+	Troca os eixos x e z de uma definição (gira o desenho em planta):
+	usado para pontes que atravessam o canal no eixo x.
+]]
+function BuildingKit.swapXZ(def)
+	local sx, sy, sz = def.Size.X, def.Size.Y, def.Size.Z
+	local f = def.Fill
+	local out = {
+		Size = Vector3.new(sz, sy, sx),
+		Fill = function(x: number, y: number, z: number): number
+			return f(z, y, x)
+		end,
+		Elements = def.Elements,
+	}
+	if def.ElementOf then
+		local src = def.ElementOf
+		local dst = buffer.create(buffer.len(src))
+		-- origem: i = x + sx*y + sx*sy*z ; destino (x'=z, z'=x): j = z + sz*y + sz*sy*x
+		for z = 0, sz - 1 do
+			for y = 0, sy - 1 do
+				for x = 0, sx - 1 do
+					local i = x + sx * y + sx * sy * z
+					local j = z + sz * y + sz * sy * x
+					buffer.writeu16(dst, j * 2, buffer.readu16(src, i * 2))
+				end
+			end
+		end
+		out.ElementOf = dst
+	end
+	return out
+end
+
 return BuildingKit

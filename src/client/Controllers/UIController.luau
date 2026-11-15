@@ -895,7 +895,7 @@ function UIController.init()
 		end
 	end)
 
-	local match = ReplicatedStorage:WaitForChild("Match") :: Configuration
+	local match = ReplicatedStorage:WaitForChild("Match", 120) :: Configuration -- o servidor gera o mapa grande antes (alguns segundos)
 	local lastOwners = {}
 	local lastState = match:GetAttribute("State")
 	match.AttributeChanged:Connect(function(name)
