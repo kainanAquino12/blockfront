@@ -1,7 +1,8 @@
 --[[
 	DevToolsManager (servidor)
-	Recebe pedidos de explosão de teste do cliente (teclas G e H) para
-	exercitar a destruição antes das armas da Fase 3.
+	Ferramentas de teste, ativas só dentro do Roblox Studio:
+	  - pedidos de explosão do cliente (teclas G e H)
+	  - bonecos de treino perto de cada base (alvos para mira e dano)
 
 	Segurança: só aceita dentro do Roblox Studio, valida tipos, valores
 	finitos, distância do personagem e cadência por jogador. É o mesmo
@@ -49,6 +50,69 @@ local function onRequest(player: Player, position: unknown, presetName: unknown)
 	DestructionManager.explode(position :: Vector3, preset.Radius, preset.Damage)
 end
 
+-- Boneco de treino (alvo estático com Humanoid) para testar mira, dano e
+-- tiro na cabeça sem um segundo jogador. Renasce 3 s depois de "morrer".
+local DUMMY_SPOTS = {
+	Vector3.new(-20, 0, -286),
+	Vector3.new(20, 0, -286),
+	Vector3.new(0, 0, -215),
+	Vector3.new(-20, 0, 286),
+	Vector3.new(20, 0, 286),
+	Vector3.new(0, 0, 215),
+}
+
+local function buildDummy(folder: Instance, position: Vector3)
+	local model = Instance.new("Model")
+	model.Name = "Boneco"
+	model:SetAttribute("TrainingDummy", true)
+	local function part(name: string, size: Vector3, offset: Vector3, color: Color3): Part
+		local p = Instance.new("Part")
+		p.Name = name
+		p.Size = size
+		p.Anchored = true
+		p.CanCollide = true
+		p.Color = color
+		p.TopSurface = Enum.SurfaceType.Smooth
+		p.BottomSurface = Enum.SurfaceType.Smooth
+		p.CFrame = CFrame.new(position + offset)
+		p.Parent = model
+		return p
+	end
+	local orange = Color3.fromRGB(240, 140, 50)
+	local gray = Color3.fromRGB(120, 124, 132)
+	local root = part("HumanoidRootPart", Vector3.new(2, 2, 1), Vector3.new(0, 3, 0), gray)
+	root.Transparency = 1
+	root.CanCollide = false
+	part("Torso", Vector3.new(2, 2, 1), Vector3.new(0, 3, 0), orange)
+	part("Head", Vector3.new(1.2, 1.2, 1.2), Vector3.new(0, 4.6, 0), gray)
+	part("Left Arm", Vector3.new(1, 2, 1), Vector3.new(-1.5, 3, 0), gray)
+	part("Right Arm", Vector3.new(1, 2, 1), Vector3.new(1.5, 3, 0), gray)
+	part("Left Leg", Vector3.new(1, 2, 1), Vector3.new(-0.5, 1, 0), gray)
+	part("Right Leg", Vector3.new(1, 2, 1), Vector3.new(0.5, 1, 0), gray)
+	local humanoid = Instance.new("Humanoid")
+	humanoid.RequiresNeck = false
+	humanoid.BreakJointsOnDeath = false
+	humanoid.DisplayName = "Boneco de treino"
+	humanoid.Parent = model
+	model.PrimaryPart = root
+	model.Parent = folder
+	humanoid.Died:Connect(function()
+		task.delay(3, function()
+			model:Destroy()
+			buildDummy(folder, position)
+		end)
+	end)
+end
+
+local function spawnDummies()
+	local folder = Instance.new("Folder")
+	folder.Name = "TrainingDummies"
+	folder.Parent = workspace
+	for _, pos in DUMMY_SPOTS do
+		buildDummy(folder, pos)
+	end
+end
+
 function DevToolsManager.isEnabled(): boolean
 	return GameConfig.DevTools.Enabled and RunService:IsStudio()
 end
@@ -58,6 +122,7 @@ function DevToolsManager.init()
 		return
 	end
 	Remotes.get("DevExplosionRequest").OnServerEvent:Connect(onRequest)
+	spawnDummies()
 	Players.PlayerRemoving:Connect(function(p)
 		lastRequest[p] = nil
 	end)

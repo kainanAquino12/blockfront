@@ -154,3 +154,32 @@ de captura, cercada por quatro prédios de esquina. Bases com muros estáticos, 
 bandeiras do time. 38 estruturas destrutíveis, cerca de 11,5 mil células em 1.274 Parts,
 servidor a 60 FPS na montagem. Prédios de 2 andares têm escada interna e laje; se as paredes
 caírem, o andar de cima desaba.
+
+## Atualização de qualidade (câmera, mira, armas, áudio, HUD)
+
+Cliente (ordem de inicialização em `ClientMain`):
+SettingsController → AudioController → DestructionEffects → CameraController → MovementController →
+ViewmodelController → CombatEffects → WeaponController → UIController → TeamSelectController → DevController.
+
+- **CameraController**: câmera FPS própria (Scriptable). Yaw/pitch pelo delta do mouse × sensibilidade
+  (menu M) × sensibilidade de mira da arma. Balanço ao andar/correr, mergulho ao aterrissar,
+  inclinação lateral, recuo real (a mira sobe e volta sozinha) e FOV (80, +6 correndo, campo de mira no ADS).
+- **ViewmodelController**: pose de mira calculada pelo Attachment `Sight` de cada modelo, então a alça
+  fica exatamente no centro da tela. Corrida, recuo na parede, recarga com carregador saindo,
+  bombeada/ferrolho, ferrolho da pistola, golpe e arremesso. Luneta da sniper (o modelo some e o HUD desenha a lente).
+- **WeaponController**: origem = câmera, direção = centro da tela + dispersão atual (Hip/Aim/Move/Bloom).
+  Escopeta envia uma semente; `WeaponMath.pelletDirections` gera os mesmos chumbos no cliente e no servidor.
+  Teclas 1-5 e roda do mouse (hotbar padrão do Roblox desligado).
+- **MovementController**: Shift corre (×1,5, só para frente, sem mirar/recarregar), mirar ×0,6, peso da arma.
+- **AudioController**: sons 3D em Attachments, atenuação por categoria, limite de sons simultâneos,
+  grupo "Distant" com equalizador para tiros longe, reverberação de cidade.
+- **UIController**: retículo que abre com a dispersão e vira ponto ao mirar, marcador de acerto com som,
+  barra de recarga, setas de dano recebido, vinheta de vida baixa, lista de armas, objetivos A/B/C.
+
+Armas (`WeaponConfig`): Rifle, Submetralhadora, Metralhadora, Sniper, Escopeta (principal, escolhida no menu),
+Pistola, Lança-foguetes, Granada, Marreta. **Para trocar um som, troque só o ID em `WeaponConfig.Sounds`
+ou `AudioConfig`.** Todos os IDs atuais carregam no Studio (PreloadAsync), mas foram escolhidos pelo
+nome na Creator Store: vale ouvir e trocar o que não agradar.
+
+Testes no Studio: bonecos de treino (só no Studio) perto de cada base; atributo `DevLookAt` no jogador
+local aponta a câmera para um ponto (usado nos testes automáticos de alinhamento mira/tiro).

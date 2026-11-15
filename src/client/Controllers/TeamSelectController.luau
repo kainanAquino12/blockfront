@@ -1,7 +1,8 @@
 --[[
 	TeamSelectController (cliente) — menu de escolha de time.
 	Abre sozinho ao entrar (o jogador só nasce depois de escolher) e com a
-	tecla M para trocar de time. Mostra quantos jogadores há em cada lado
+	tecla M para trocar de time, escolher a arma principal e ajustar a
+	sensibilidade do mouse. Enquanto aberto, câmera e armas ficam pausadas. Mostra quantos jogadores há em cada lado
 	e desabilita o time que ficaria desequilibrado (a regra oficial é do
 	servidor, em TeamManager.canJoin).
 
@@ -16,7 +17,12 @@ local UserInputService = game:GetService("UserInputService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local GameConfig = require(ReplicatedStorage.Shared.Config.GameConfig)
+local WeaponConfig = require(ReplicatedStorage.Shared.Config.WeaponConfig)
 local Remotes = require(ReplicatedStorage.Shared.Modules.Remotes)
+local CameraController = require(script.Parent.CameraController)
+local WeaponController = require(script.Parent.WeaponController)
+local SettingsController = require(script.Parent.SettingsController)
+local UIController = require(script.Parent.UIController)
 
 local player = Players.LocalPlayer
 
@@ -80,8 +86,14 @@ function TeamSelectController.setOpen(value: boolean)
 	if hud then
 		hud.Enabled = not value
 	end
+	CameraController.setEnabled(not value)
+	WeaponController.setBlocked(value)
+	UIController.setMenuOpen(value)
 	if value then
 		refresh()
+		if TeamSelectController.RefreshLoadout then
+			TeamSelectController.RefreshLoadout()
+		end
 	end
 end
 
@@ -212,10 +224,115 @@ local function build()
 
 	buildCard("Blue", 0.32)
 	buildCard("Red", 0.68)
+	for _, c in cards do
+		c.button.Position = UDim2.fromScale(c.button.Position.X.Scale, 0.44)
+	end
+
+	-- Arma principal (vale no próximo nascimento)
+	local loadoutLabel = make("TextLabel", {
+		AnchorPoint = Vector2.new(0.5, 0),
+		Position = UDim2.new(0.5, 0, 0.44, 182),
+		Size = UDim2.fromOffset(640, 18),
+		BackgroundTransparency = 1,
+		Font = Enum.Font.GothamBold,
+		TextScaled = true,
+		TextColor3 = Color3.fromRGB(170, 178, 196),
+		Text = "ARMA PRINCIPAL",
+		Parent = gui,
+	})
+	local row = make("Frame", {
+		AnchorPoint = Vector2.new(0.5, 0),
+		Position = UDim2.new(0.5, 0, 0.44, 204),
+		Size = UDim2.fromOffset(660, 38),
+		BackgroundTransparency = 1,
+		Parent = gui,
+	})
+	make("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, HorizontalAlignment = Enum.HorizontalAlignment.Center, Padding = UDim.new(0, 6), Parent = row })
+	local loadoutButtons = {}
+	local function refreshLoadout()
+		local current = player:GetAttribute("Primary") or WeaponConfig.DefaultPrimary
+		for id, b in loadoutButtons do
+			b.BackgroundColor3 = if id == current then Color3.fromRGB(240, 200, 70) else Color3.fromRGB(36, 41, 54)
+			b.TextColor3 = if id == current then Color3.fromRGB(20, 22, 28) else Color3.new(1, 1, 1)
+		end
+		loadoutLabel.Text = if player.Character then "ARMA PRINCIPAL (VALE NO PRÓXIMO RENASCIMENTO)" else "ARMA PRINCIPAL"
+	end
+	for _, id in WeaponConfig.Primaries do
+		local w = WeaponConfig.Weapons[id]
+		local b = make("TextButton", {
+			Size = UDim2.fromOffset(126, 38),
+			BackgroundColor3 = Color3.fromRGB(36, 41, 54),
+			Font = Enum.Font.GothamBlack,
+			TextScaled = true,
+			TextColor3 = Color3.new(1, 1, 1),
+			Text = string.upper(w.DisplayName),
+			Parent = row,
+		})
+		make("UICorner", { CornerRadius = UDim.new(0, 4), Parent = b })
+		make("UIPadding", { PaddingTop = UDim.new(0, 10), PaddingBottom = UDim.new(0, 10), PaddingLeft = UDim.new(0, 6), PaddingRight = UDim.new(0, 6), Parent = b })
+		b.Activated:Connect(function()
+			Remotes.get("LoadoutSelect"):FireServer(id)
+		end)
+		loadoutButtons[id] = b
+	end
+	player:GetAttributeChangedSignal("Primary"):Connect(refreshLoadout)
+	TeamSelectController.RefreshLoadout = refreshLoadout
+	refreshLoadout()
+
+	-- Sensibilidade do mouse
+	local sens = make("Frame", {
+		AnchorPoint = Vector2.new(0.5, 0),
+		Position = UDim2.new(0.5, 0, 0.44, 252),
+		Size = UDim2.fromOffset(320, 34),
+		BackgroundTransparency = 1,
+		Parent = gui,
+	})
+	make("TextLabel", {
+		Size = UDim2.fromOffset(150, 34),
+		BackgroundTransparency = 1,
+		Font = Enum.Font.GothamBold,
+		TextScaled = true,
+		TextColor3 = Color3.fromRGB(170, 178, 196),
+		Text = "SENSIBILIDADE",
+		Parent = sens,
+	})
+	local sensValue = make("TextLabel", {
+		Position = UDim2.fromOffset(200, 0),
+		Size = UDim2.fromOffset(70, 34),
+		BackgroundTransparency = 1,
+		Font = Enum.Font.GothamBlack,
+		TextScaled = true,
+		TextColor3 = Color3.new(1, 1, 1),
+		Text = "",
+		Parent = sens,
+	})
+	local function sensButton(text: string, x: number, delta: number)
+		local b = make("TextButton", {
+			Position = UDim2.fromOffset(x, 0),
+			Size = UDim2.fromOffset(34, 34),
+			BackgroundColor3 = Color3.fromRGB(36, 41, 54),
+			Font = Enum.Font.GothamBlack,
+			TextScaled = true,
+			TextColor3 = Color3.new(1, 1, 1),
+			Text = text,
+			Parent = sens,
+		})
+		make("UICorner", { CornerRadius = UDim.new(0, 4), Parent = b })
+		b.Activated:Connect(function()
+			SettingsController.setSensitivity(SettingsController.getSensitivity() + delta)
+		end)
+	end
+	sensButton("-", 160, -SettingsController.SensitivityStep)
+	sensButton("+", 276, SettingsController.SensitivityStep)
+	local function refreshSens()
+		sensValue.Text = string.format("%.1f", SettingsController.getSensitivity())
+	end
+	SettingsController.Changed:Connect(refreshSens)
+	refreshSens()
 
 	local auto = make("TextButton", {
 		AnchorPoint = Vector2.new(0.5, 0),
-		Position = UDim2.new(0.5, 0, 0.55, 190),
+		Position = UDim2.new(0.5, 0, 0.44, 300),
 		Size = UDim2.fromOffset(240, 44),
 		BackgroundColor3 = Color3.fromRGB(36, 41, 54),
 		Font = Enum.Font.GothamBlack,
@@ -265,8 +382,6 @@ function TeamSelectController.init()
 		if not player.Character then
 			camera.CameraType = Enum.CameraType.Scriptable
 			camera.CFrame = OVERVIEW
-		elseif camera.CameraType == Enum.CameraType.Scriptable then
-			camera.CameraType = Enum.CameraType.Custom
 		end
 	end)
 

@@ -4,6 +4,10 @@
 	  G = explosão grande no ponto do mouse (prévia do lança-foguetes)
 	  H = impacto pequeno no ponto do mouse (prévia de projétil / perfuração)
 	O cliente só PEDE; quem decide e destrói é o servidor (DevToolsManager).
+
+	Gancho de teste automatizado (também só no Studio): definir o atributo
+	"DevLookAt" (Vector3) no jogador local aponta a câmera para esse ponto.
+	Usado para testar o alinhamento mira/tiro com cliques reais do mouse.
 ]]
 
 local Players = game:GetService("Players")
@@ -13,6 +17,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local GameConfig = require(ReplicatedStorage.Shared.Config.GameConfig)
 local Remotes = require(ReplicatedStorage.Shared.Modules.Remotes)
+local CameraController = require(script.Parent.CameraController)
 
 local DevController = {}
 
@@ -59,6 +64,13 @@ function DevController.init()
 			if pos then
 				request:FireServer(pos, preset)
 			end
+		end
+	end)
+	local player = Players.LocalPlayer
+	player:GetAttributeChangedSignal("DevLookAt"):Connect(function()
+		local target = player:GetAttribute("DevLookAt")
+		if typeof(target) == "Vector3" then
+			CameraController.lookAt(target)
 		end
 	end)
 	print("[BLOCKFRONT] DevTools: G = explosão grande, H = impacto pequeno")

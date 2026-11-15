@@ -10,7 +10,11 @@
 	  esquerda    time do jogador + vida
 	  direita     arma + munição + recarga
 	  canto       feed de eliminações
-	  centro      mira + marcador de acerto + notificações de conquista
+	  centro      retículo dinâmico (abre com a dispersão, vira ponto ao mirar),
+	              marcador de acerto, barra de recarga, luneta da sniper,
+	              setas de dano recebido, vinheta de vida baixa
+	              (ScreenGui "CombatOverlay", DisplayOrder 50: sempre por cima)
+	  direita     lista de armas (1-5) + munição
 	  placar      segurar Tab (e automático no fim da partida)
 ]]
 
@@ -279,32 +283,148 @@ local function buildWeaponPanel()
 		Text = "",
 		Parent = p,
 	})
+
+	-- Lista de armas (teclas 1-5)
+	local list = make("Frame", {
+		Name = "Slots",
+		AnchorPoint = Vector2.new(1, 1),
+		Position = UDim2.new(1, -16, 1, -100),
+		Size = UDim2.fromOffset(200, 5 * 24),
+		BackgroundTransparency = 1,
+		Parent = gui,
+	}, { make("UIListLayout", { Padding = UDim.new(0, 3), HorizontalAlignment = Enum.HorizontalAlignment.Right, SortOrder = Enum.SortOrder.LayoutOrder }) })
+	refs.Slots = {}
+	for i = 1, 5 do
+		local row = panel({ Size = UDim2.fromOffset(180, 21), LayoutOrder = i, BackgroundTransparency = 0.45, Parent = list })
+		local text = label({
+			Position = UDim2.fromOffset(8, 3),
+			Size = UDim2.new(1, -16, 1, -6),
+			Font = THEME.FontBody,
+			TextXAlignment = Enum.TextXAlignment.Right,
+			TextColor3 = THEME.Muted,
+			Text = "",
+			Parent = row,
+		})
+		refs.Slots[i] = { row = row, text = text }
+	end
 end
 
+-- Retículo, marcador de acerto, barra de recarga, luneta, indicadores de dano
+-- e vinheta. Ficam num ScreenGui próprio com DisplayOrder alto para nunca
+-- ficarem atrás de outros elementos.
 local function buildCrosshair()
+	local cgui = make("ScreenGui", {
+		Name = "CombatOverlay",
+		ResetOnSpawn = false,
+		IgnoreGuiInset = true,
+		DisplayOrder = 50,
+		Parent = player:WaitForChild("PlayerGui"),
+	})
+	refs.CombatGui = cgui
+
+	-- Vinheta de vida baixa / dano (4 bordas com gradiente)
+	refs.Vignette = {}
+	for _, def in {
+		{ UDim2.fromScale(0, 0), UDim2.fromScale(1, 0.22), 90 },
+		{ UDim2.fromScale(0, 0.78), UDim2.fromScale(1, 0.22), -90 },
+		{ UDim2.fromScale(0, 0), UDim2.fromScale(0.16, 1), 0 },
+		{ UDim2.fromScale(0.84, 0), UDim2.fromScale(0.16, 1), 180 },
+	} do
+		local f = make("Frame", {
+			Position = def[1],
+			Size = def[2],
+			BackgroundColor3 = Color3.fromRGB(200, 20, 20),
+			BorderSizePixel = 0,
+			BackgroundTransparency = 1,
+			Parent = cgui,
+		})
+		local g = make("UIGradient", {
+			Rotation = def[3],
+			Transparency = NumberSequence.new(0, 1),
+			Parent = f,
+		})
+		table.insert(refs.Vignette, f)
+		local _ = g
+	end
+
+	-- Luneta: círculo transparente com contorno preto enorme (cobre o resto da tela)
+	local scope = make("Frame", {
+		Name = "Scope",
+		Size = UDim2.fromScale(1, 1),
+		BackgroundTransparency = 1,
+		Visible = false,
+		Parent = cgui,
+	})
+	local lens = make("Frame", {
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		Position = UDim2.fromScale(0.5, 0.5),
+		Size = UDim2.fromScale(0.9, 0.9),
+		BackgroundTransparency = 1,
+		Parent = scope,
+	}, {
+		make("UIAspectRatioConstraint", { AspectRatio = 1 }),
+		make("UICorner", { CornerRadius = UDim.new(0.5, 0) }),
+		make("UIStroke", { Thickness = 3000, Color = Color3.new(0, 0, 0) }),
+	})
+	for _, def in {
+		{ UDim2.new(0.5, -1, 0, 0), UDim2.new(0, 2, 0.46, 0) },
+		{ UDim2.new(0.5, -1, 0.54, 0), UDim2.new(0, 2, 0.46, 0) },
+		{ UDim2.new(0, 0, 0.5, -1), UDim2.new(0.46, 0, 0, 2) },
+		{ UDim2.new(0.54, 0, 0.5, -1), UDim2.new(0.46, 0, 0, 2) },
+	} do
+		make("Frame", { Position = def[1], Size = def[2], BackgroundColor3 = Color3.new(0, 0, 0), BorderSizePixel = 0, Parent = lens })
+	end
+	make("Frame", {
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		Position = UDim2.fromScale(0.5, 0.5),
+		Size = UDim2.fromOffset(4, 4),
+		BackgroundColor3 = Color3.fromRGB(255, 60, 60),
+		BorderSizePixel = 0,
+		Parent = lens,
+	}, { make("UICorner", { CornerRadius = UDim.new(1, 0) }) })
+	refs.Scope = scope
+
+	-- Retículo dinâmico: 4 barras afastadas pela dispersão atual + ponto central
 	local holder = make("Frame", {
 		Name = "Crosshair",
 		AnchorPoint = Vector2.new(0.5, 0.5),
 		Position = UDim2.fromScale(0.5, 0.5),
-		Size = UDim2.fromOffset(28, 28),
+		Size = UDim2.fromOffset(0, 0),
 		BackgroundTransparency = 1,
-		Parent = gui,
+		Parent = cgui,
 	})
-	for _, def in {
-		{ UDim2.new(0.5, -1, 0, 0), UDim2.fromOffset(2, 8) },
-		{ UDim2.new(0.5, -1, 1, -8), UDim2.fromOffset(2, 8) },
-		{ UDim2.new(0, 0, 0.5, -1), UDim2.fromOffset(8, 2) },
-		{ UDim2.new(1, -8, 0.5, -1), UDim2.fromOffset(8, 2) },
-	} do
-		make("Frame", {
-			Position = def[1],
-			Size = def[2],
+	refs.Bars = {}
+	for i = 1, 4 do
+		local bar = make("Frame", {
+			AnchorPoint = Vector2.new(0.5, 0.5),
 			BackgroundColor3 = Color3.new(1, 1, 1),
 			BorderSizePixel = 0,
 			Parent = holder,
-		}, { make("UIStroke", { Thickness = 1, Color = Color3.new(0, 0, 0), Transparency = 0.5 }) })
+		}, { make("UIStroke", { Thickness = 1, Color = Color3.new(0, 0, 0), Transparency = 0.4 }) })
+		refs.Bars[i] = bar
 	end
+	refs.Dot = make("Frame", {
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		Size = UDim2.fromOffset(3, 3),
+		BackgroundColor3 = Color3.new(1, 1, 1),
+		BorderSizePixel = 0,
+		Parent = holder,
+	}, { make("UIStroke", { Thickness = 1, Color = Color3.new(0, 0, 0), Transparency = 0.4 }) })
 	refs.Crosshair = holder
+
+	-- Barra de recarga sob o retículo
+	local rbg = make("Frame", {
+		AnchorPoint = Vector2.new(0.5, 0),
+		Position = UDim2.new(0.5, 0, 0.5, 34),
+		Size = UDim2.fromOffset(70, 4),
+		BackgroundColor3 = Color3.fromRGB(0, 0, 0),
+		BackgroundTransparency = 0.4,
+		BorderSizePixel = 0,
+		Visible = false,
+		Parent = cgui,
+	})
+	refs.ReloadFill = make("Frame", { Size = UDim2.fromScale(0, 1), BackgroundColor3 = Color3.new(1, 1, 1), BorderSizePixel = 0, Parent = rbg })
+	refs.ReloadBar = rbg
 
 	refs.HitMarker = label({
 		AnchorPoint = Vector2.new(0.5, 0.5),
@@ -312,8 +432,115 @@ local function buildCrosshair()
 		Size = UDim2.fromOffset(34, 34),
 		Text = "×",
 		TextTransparency = 1,
-		Parent = gui,
+		Parent = cgui,
 	})
+
+	-- Indicadores de dano (pool de 6 setas em volta do centro)
+	refs.DamageMarks = {}
+	for i = 1, 6 do
+		local m = make("Frame", {
+			AnchorPoint = Vector2.new(0.5, 0.5),
+			Size = UDim2.fromOffset(70, 12),
+			BackgroundColor3 = Color3.fromRGB(230, 40, 40),
+			BorderSizePixel = 0,
+			BackgroundTransparency = 1,
+			Parent = cgui,
+		}, { make("UICorner", { CornerRadius = UDim.new(1, 0) }) })
+		refs.DamageMarks[i] = { frame = m, from = Vector3.zero, t = -1 }
+	end
+end
+
+local damageFlash = 0
+local nextMark = 1
+
+function UIController.showDamage(from: Vector3?, amount: number)
+	damageFlash = math.min(1, damageFlash + amount / 60)
+	if not from then
+		return
+	end
+	local m = refs.DamageMarks[nextMark]
+	nextMark = nextMark % #refs.DamageMarks + 1
+	m.from = from
+	m.t = 0
+end
+
+local function updateCombatUI(dt: number)
+	local camera = workspace.CurrentCamera
+	local character = player.Character
+	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+	local hp = humanoid and humanoid.Health or 0
+	local alive = hp > 0
+	local state = WeaponController.getState()
+	local scoped = ViewmodelController.isScoped()
+	local aimA = ViewmodelController.getAimAlpha()
+	local menuOpen = refs.MenuOpen == true
+
+	refs.Scope.Visible = alive and scoped and not menuOpen
+
+	-- Retículo
+	local showCross = alive and state ~= nil and not scoped and not menuOpen
+	refs.Crosshair.Visible = showCross
+	if showCross then
+		local spread = WeaponController.getSpread()
+		local half = math.tan(math.rad(camera.FieldOfView / 2))
+		local gap = math.tan(math.rad(spread)) / half * (camera.ViewportSize.Y / 2)
+		gap = math.clamp(gap + 4, 4, 120)
+		local barsAlpha = math.clamp(aimA * 1.4, 0, 1) -- some ao mirar (fica o ponto)
+		local isMelee = state.Weapon.Kind == "Melee" or state.Weapon.Kind == "Throwable"
+		local len, thick = 9, 2
+		local defs = {
+			{ UDim2.fromOffset(0, -gap - len / 2), UDim2.fromOffset(thick, len) },
+			{ UDim2.fromOffset(0, gap + len / 2), UDim2.fromOffset(thick, len) },
+			{ UDim2.fromOffset(-gap - len / 2, 0), UDim2.fromOffset(len, thick) },
+			{ UDim2.fromOffset(gap + len / 2, 0), UDim2.fromOffset(len, thick) },
+		}
+		for i, bar in refs.Bars do
+			bar.Position = defs[i][1]
+			bar.Size = defs[i][2]
+			bar.BackgroundTransparency = if isMelee then 1 else barsAlpha
+			bar.UIStroke.Transparency = if isMelee then 1 else 0.4 + barsAlpha * 0.6
+		end
+		refs.Dot.Size = if aimA > 0.5 then UDim2.fromOffset(4, 4) else UDim2.fromOffset(3, 3)
+		refs.Dot.BackgroundColor3 = if aimA > 0.5 then Color3.fromRGB(255, 90, 90) else Color3.new(1, 1, 1)
+	end
+
+	-- Recarga
+	refs.ReloadBar.Visible = alive and state ~= nil and state.Reloading
+	if refs.ReloadBar.Visible then
+		refs.ReloadFill.Size = UDim2.fromScale(WeaponController.getReloadProgress(), 1)
+	end
+
+	-- Indicadores de dano: apontam para a origem conforme a câmera gira
+	local center = camera.ViewportSize / 2
+	for _, m in refs.DamageMarks do
+		if m.t >= 0 then
+			m.t += dt
+			if m.t > 1.4 then
+				m.t = -1
+				m.frame.BackgroundTransparency = 1
+			else
+				local rel = camera.CFrame:PointToObjectSpace(m.from)
+				local ang = math.atan2(rel.X, -rel.Z)
+				local r = 130
+				m.frame.Position = UDim2.fromOffset(center.X + math.sin(ang) * r, center.Y - math.cos(ang) * r)
+				m.frame.Rotation = math.deg(ang) + 90
+				m.frame.BackgroundTransparency = 0.1 + 0.9 * (m.t / 1.4)
+			end
+		end
+	end
+
+	-- Vinheta: flash ao levar dano + persistente com pouca vida
+	damageFlash = math.max(0, damageFlash - dt * 1.5)
+	local low = if alive and hp < 35 then (1 - hp / 35) * 0.6 else 0
+	local v = math.clamp(math.max(damageFlash, low), 0, 0.85)
+	for _, f in refs.Vignette do
+		f.BackgroundTransparency = 1 - v
+	end
+end
+
+-- Menu aberto: esconde retículo e luneta.
+function UIController.setMenuOpen(value: boolean)
+	refs.MenuOpen = value
 end
 
 local function buildFeedAndToasts()
@@ -465,7 +692,6 @@ local function updatePlayer()
 		elseif ratio > 0.25 then Color3.fromRGB(250, 200, 70)
 		else THEME.Danger
 	refs.HealthText.Text = tostring(math.ceil(hp))
-	refs.Crosshair.Visible = hp > 0 and WeaponController.getState() ~= nil and not ViewmodelController.isAiming()
 end
 
 local function updateWeapon()
@@ -485,6 +711,23 @@ local function updateWeapon()
 		refs.Ammo.Text = tostring(s.Ammo)
 		refs.Ammo.TextColor3 = if s.Ammo == 0 then THEME.Danger else THEME.Text
 		refs.Reserve.Text = if s.Weapon.Kind == "Throwable" then "RESTANTES" else "/ " .. tostring(s.Reserve)
+	end
+end
+
+local function updateSlots()
+	local slots = WeaponController.getSlots()
+	local current = WeaponController.getState()
+	for i, r in refs.Slots do
+		local t = slots[i]
+		r.row.Visible = t ~= nil
+		if t then
+			local id = t:GetAttribute("WeaponId")
+			local w = id and WeaponConfig.Weapons[id]
+			local active = current ~= nil and w ~= nil and current.Weapon == w
+			r.text.Text = upper(w and w.DisplayName or t.Name) .. "   " .. i
+			r.text.TextColor3 = if active then THEME.Text else THEME.Muted
+			r.row.BackgroundTransparency = if active then 0.1 else 0.55
+		end
 	end
 end
 
@@ -681,11 +924,23 @@ function UIController.init()
 			pushFeed(e)
 		elseif e.Type == "Hit" then
 			flashHitMarker(e.Lethal, e.Headshot)
+		elseif e.Type == "Damaged" then
+			UIController.showDamage(e.From, e.Amount or 10)
 		end
 	end)
 
-	WeaponController.Changed:Connect(updateWeapon)
+	WeaponController.Changed:Connect(function()
+		updateWeapon()
+		updateSlots()
+	end)
 	RunService.Heartbeat:Connect(updatePlayer)
+	RunService.RenderStepped:Connect(updateCombatUI)
+	task.spawn(function()
+		while true do
+			updateSlots()
+			task.wait(1)
+		end
+	end)
 	updateWeapon()
 end
 

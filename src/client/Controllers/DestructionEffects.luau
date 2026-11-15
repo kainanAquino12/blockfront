@@ -1,8 +1,9 @@
 --[[
 	DestructionEffects (cliente)
 	Somente visual. Recebe DestructionBatch do servidor e cria:
-	  - efeito de explosão (Explosion sem força + clarão)
+	  - efeito de explosão (Explosion sem força + clarão + som próximo ou distante)
 	  - fragmentos cúbicos físicos, locais a este cliente
+	Também empresta o pool de fragmentos para impactos de tiro (spawnFragment).
 
 	Os fragmentos nunca existem no servidor e não afetam a jogabilidade.
 	Limites (DestructionConfig.Debris):
@@ -19,8 +20,8 @@ local GameConfig = require(ReplicatedStorage.Shared.Config.GameConfig)
 local DestructionConfig = require(ReplicatedStorage.Shared.Config.DestructionConfig)
 local MaterialConfig = require(ReplicatedStorage.Shared.Config.MaterialConfig)
 local Remotes = require(ReplicatedStorage.Shared.Modules.Remotes)
-local WeaponConfig = require(ReplicatedStorage.Shared.Config.WeaponConfig)
-local Debris = game:GetService("Debris")
+local AudioConfig = require(ReplicatedStorage.Shared.Config.AudioConfig)
+local AudioController = require(script.Parent.AudioController)
 
 local cfg = DestructionConfig.Debris
 
@@ -89,6 +90,33 @@ local function spawnDebris(position: Vector3, materialId: number, voxelSize: num
 	})
 end
 
+--[[
+	Fragmento avulso (impactos de tiro em superfícies que não são voxel).
+	color: cor do fragmento; size: lado em studs.
+]]
+function DestructionEffects.spawnFragment(position: Vector3, color: Color3, material: Enum.Material, size: number, velocity: Vector3)
+	if #active >= cfg.MaxActive then
+		return
+	end
+	local p = table.remove(free)
+	if not p then
+		return
+	end
+	p.Size = Vector3.new(size, size, size)
+	p.Material = material
+	p.Color = color
+	p.Transparency = 0
+	p.CFrame = CFrame.new(position) * CFrame.Angles(rng:NextNumber(0, 3), rng:NextNumber(0, 3), 0)
+	p.Anchored = false
+	p.AssemblyLinearVelocity = velocity
+	p.AssemblyAngularVelocity = rng:NextUnitVector() * 10
+	table.insert(active, { part = p, born = os.clock(), life = rng:NextNumber(0.6, 1.2) })
+end
+
+function DestructionEffects.spawnVoxelFragment(position: Vector3, materialId: number, size: number, velocity: Vector3)
+	spawnDebris(position, materialId, size, velocity)
+end
+
 local function cellPosition(origin: CFrame, vs: number, sx: number, sy: number, i: number): Vector3
 	local x = i % sx
 	local rest = (i - x) // sx
@@ -152,16 +180,16 @@ local function playExplosion(position: Vector3, radius: number)
 	e.Position = position
 	e.Parent = workspace
 
-	local holder = Instance.new("Attachment")
-	holder.WorldPosition = position
-	holder.Parent = workspace.Terrain
-	local sound = Instance.new("Sound")
-	sound.SoundId = WeaponConfig.ExplosionSound
-	sound.Volume = 1
-	sound.RollOffMaxDistance = 600
-	sound.Parent = holder
-	sound:Play()
-	Debris:AddItem(holder, 4)
+	-- Som: versão próxima com detritos, ou abafada se estiver longe
+	local dist = (position - workspace.CurrentCamera.CFrame.Position).Magnitude
+	if dist > AudioConfig.Explosion.DistantFrom then
+		AudioController.play(AudioConfig.Explosion.Distant, position, { Category = "Explosion", Volume = 1, Vary = 0.08 })
+	else
+		AudioController.play(AudioConfig.Explosion.Near, position, { Category = "Explosion", Volume = 1.2, Vary = 0.08 })
+		task.delay(0.25, function()
+			AudioController.play(AudioConfig.Explosion.Debris, position, { Category = "Explosion", Volume = 0.7, Vary = 0.1 })
+		end)
+	end
 
 	local flash = Instance.new("Part")
 	flash.Shape = Enum.PartType.Ball
