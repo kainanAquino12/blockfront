@@ -4,10 +4,10 @@ Lista só o que foi observado ou pode ser verificado no código. Nada aqui foi i
 
 ## Confirmados ou observados
 
-1. **Braços do viewmodel simples.** São barras retas na cor do time (`ViewmodelController`, ARM_WIDTH 0.2).
-   Com a pistola, o braço esquerdo cruza a parte de baixo da tela. Funciona, mas não é bonito.
-2. **O lança-foguetes ocupava muito da tela.** A pose Hip foi afastada (`WeaponConfig.RocketLauncher.Viewmodel.Hip`),
-   mas ninguém conferiu o resultado depois do ajuste.
+1. **Braços do viewmodel ainda simples (V3: melhorados).** Agora são antebraço de comprimento fixo (0.62) + luva,
+   manga na cor do time escurecida. Continuam sendo blocos; um modelo de mão/manga mais detalhado seria o próximo passo.
+2. **Asset 203785492 ("Asset type does not match").** Aparece no Output ao entrar. Não está no código do projeto
+   (grep em src/ não acha); provavelmente vem de um acessório do avatar do jogador de teste.
 3. **Picos de renderização no cliente.** Chegaram a 25 ms durante 6 explosões seguidas (`Stats.RenderCPUFrameTime`).
    O FPS medido no Studio foi 15 mesmo sem explosões, porque o Studio estava fora de foco. **O FPS real não foi medido.**
 4. **Prédios ficam de pé sobre os pilares de canto.** Isso acontece mesmo com o térreo destruído, porque o apoio é
@@ -18,6 +18,8 @@ Lista só o que foi observado ou pode ser verificado no código. Nada aqui foi i
    `local M = require(game.ServerScriptService.Server.Managers.MapManager); M.buildStatic(); M.buildDestructibles()`
    e salve.
 6. **Código morto pequeno.** Em `UIController.buildCrosshair` sobrou `local _ = g`, sem efeito.
+7. **Armas não testadas em ADS no V3:** SMG, LMG, sniper e escopeta (não estão no kit padrão do teste).
+   Rifle, pistola e lança-foguetes foram testados com mouse real.
 
 ## Riscos e limitações (não testados)
 
@@ -36,6 +38,11 @@ Lista só o que foi observado ou pode ser verificado no código. Nada aqui foi i
 - **Lighting.** Rodar a prévia do mapa em Edit aplica as configurações de iluminação no place salvo. Ao dar Play o servidor aplica de novo.
 
 ## Correções já feitas (para não repetir)
+
+- V3: estado do ADS espalhado em 4 scripts → fonte única `AimController` (Viewmodel, Weapon, UI e Camera só leem dele).
+- V3: alça de mira sólida tampava a massa → alças vazadas (anel) em Rifle/SMG/LMG e alça em U na pistola (`WeaponModels`).
+- V3: partículas de acessórios do avatar (ex.: asas VFX) apareciam borradas na frente da câmera → `CameraController.hideEffect` desliga emissores do próprio personagem.
+- V3: fragmento de impacto podia nascer colado na câmera → `DestructionEffects.spawnFragment` ignora posições a menos de 4 studs.
 
 - O ADS falhava porque a câmera padrão do Roblox usava o botão direito. Foi substituída pela câmera própria Scriptable (`CameraController`).
 - O ADS ficava desalinhado com poses manuais. Agora a pose é calculada pelo Attachment `Sight` de cada modelo.

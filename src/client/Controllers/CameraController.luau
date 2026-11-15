@@ -112,16 +112,30 @@ function CameraController.setEnabled(value: boolean)
 	end
 end
 
+-- Efeitos de acessórios (asas VFX, partículas, beams) ignoram o
+-- LocalTransparencyModifier e apareciam borrados colados na câmera.
+local function hideEffect(d: Instance)
+	if d:IsA("ParticleEmitter") or d:IsA("Beam") or d:IsA("Trail") or d:IsA("Fire") or d:IsA("Smoke") or d:IsA("Sparkles") then
+		(d :: any).Enabled = false
+	elseif d:IsA("Decal") and d.Parent and d.Parent.Parent and d.Parent.Parent:IsA("Accessory") then
+		d.Transparency = 1
+	end
+end
+
 local function collectHidden(character: Model)
 	table.clear(hiddenParts)
 	for _, d in character:GetDescendants() do
 		if d:IsA("BasePart") then
 			table.insert(hiddenParts, d)
+		else
+			hideEffect(d)
 		end
 	end
 	character.DescendantAdded:Connect(function(d)
 		if d:IsA("BasePart") then
 			table.insert(hiddenParts, d)
+		else
+			hideEffect(d)
 		end
 	end)
 end
@@ -212,7 +226,7 @@ local function update(dt: number)
 	camera.CFrame = cf
 	camera.Focus = cf * CFrame.new(0, 0, -4)
 
-	local targetFov = BASE_FOV + SPRINT_FOV * sprintAlpha
+	local targetFov = SettingsController.getFov() + SPRINT_FOV * sprintAlpha
 	targetFov += (aimFov - targetFov) * aimAlpha
 	camera.FieldOfView += (targetFov - camera.FieldOfView) * math.min(dt * 14, 1)
 

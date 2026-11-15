@@ -78,6 +78,12 @@ local function makeContext(mode: string, static: Instance, destructibles: Instan
 	end
 
 	function ctx.struct(name: string, x: number, z: number, def, y: number?)
+		-- Estruturas com fachada externa (StructureKit.withFacade) crescem 1 célula
+		-- para fora em X e Z; Offset devolve o canto ao mesmo lugar do miolo.
+		if def.Offset then
+			x += def.Offset.X
+			z += def.Offset.Z
+		end
 		local origin, fill
 		if mirrored then
 			local sz = def.Size.Z
@@ -126,55 +132,58 @@ local function makeSpawn(teamName: string, cf: CFrame, parent: Instance)
 end
 
 local function applyEnvironment()
-	-- Fim de tarde dourado, puxando para o roxo no horizonte (referência visual do jogo).
-	Lighting.ClockTime = 16.9
-	Lighting.GeographicLatitude = 30
-	Lighting.Brightness = 2.6
-	Lighting.Ambient = Color3.fromRGB(104, 96, 120)
-	Lighting.OutdoorAmbient = Color3.fromRGB(150, 140, 170)
-	Lighting.EnvironmentDiffuseScale = 0.7
-	Lighting.EnvironmentSpecularScale = 0.35
+	-- Direção V3 "stylized military voxel": tarde clara, sol baixo lateral para
+	-- marcar os volumes das fachadas, cores pouco saturadas e neblina leve que
+	-- encurta as linhas de visão muito longas sem escurecer o combate.
+	Lighting.ClockTime = 15.6
+	Lighting.GeographicLatitude = 38
+	Lighting.Brightness = 1.9
+	Lighting.Ambient = Color3.fromRGB(70, 72, 78)
+	Lighting.OutdoorAmbient = Color3.fromRGB(118, 120, 126)
+	Lighting.EnvironmentDiffuseScale = 0.8
+	Lighting.EnvironmentSpecularScale = 0.4
 	Lighting.GlobalShadows = true
-	Lighting.ShadowSoftness = 0.25
-	Lighting.ExposureCompensation = 0.1
+	Lighting.ShadowSoftness = 0.2
+	Lighting.ExposureCompensation = 0
 	for _, c in Lighting:GetChildren() do
 		if c:IsA("PostEffect") or c:IsA("Atmosphere") or c:IsA("Sky") then
 			c:Destroy()
 		end
 	end
 	local atmosphere = Instance.new("Atmosphere")
-	atmosphere.Density = 0.3
-	atmosphere.Offset = 0.15
-	atmosphere.Color = Color3.fromRGB(236, 200, 214)
-	atmosphere.Decay = Color3.fromRGB(120, 92, 160)
-	atmosphere.Glare = 0.35
-	atmosphere.Haze = 1.4
+	atmosphere.Density = 0.36
+	atmosphere.Offset = 0.05
+	atmosphere.Color = Color3.fromRGB(196, 196, 192)
+	atmosphere.Decay = Color3.fromRGB(128, 122, 116)
+	atmosphere.Glare = 0.1
+	atmosphere.Haze = 1.6
 	atmosphere.Parent = Lighting
 	local cc = Instance.new("ColorCorrectionEffect")
-	cc.Saturation = 0.2
-	cc.Contrast = 0.1
-	cc.TintColor = Color3.fromRGB(255, 244, 240)
+	cc.Saturation = -0.12
+	cc.Contrast = 0.12
+	cc.Brightness = 0
+	cc.TintColor = Color3.fromRGB(255, 250, 242)
 	cc.Parent = Lighting
 	local bloom = Instance.new("BloomEffect")
-	bloom.Intensity = 0.45
-	bloom.Size = 26
-	bloom.Threshold = 1.3
+	bloom.Intensity = 0.25
+	bloom.Size = 20
+	bloom.Threshold = 1.6
 	bloom.Parent = Lighting
 	local rays = Instance.new("SunRaysEffect")
-	rays.Intensity = 0.06
-	rays.Spread = 0.7
+	rays.Intensity = 0.03
+	rays.Spread = 0.5
 	rays.Parent = Lighting
 
 	local terrain = workspace.Terrain
 	local clouds = terrain:FindFirstChildOfClass("Clouds") or Instance.new("Clouds")
-	clouds.Cover = 0.55
-	clouds.Density = 0.55
-	clouds.Color = Color3.fromRGB(255, 226, 232)
+	clouds.Cover = 0.62
+	clouds.Density = 0.45
+	clouds.Color = Color3.fromRGB(226, 224, 220)
 	clouds.Parent = terrain
-	terrain.WaterColor = Color3.fromRGB(52, 120, 170)
-	terrain.WaterTransparency = 0.6
-	terrain.WaterReflectance = 0.4
-	terrain.WaterWaveSize = 0.1
+	terrain.WaterColor = Color3.fromRGB(58, 74, 70)
+	terrain.WaterTransparency = 0.75
+	terrain.WaterReflectance = 0.3
+	terrain.WaterWaveSize = 0.08
 end
 
 local function buildGround(map: Instance)
@@ -202,6 +211,10 @@ local function buildGround(map: Instance)
 			PropKit.block(map, CFrame.new(x, 0.02, rng:NextNumber(-hz, hz)), Vector3.new(w, 0.05, d), if rng:NextNumber() < 0.75 then C.GrassDark else C.Dirt, Enum.Material.Grass, true)
 		end
 	end
+
+	-- Piso urbano (calçamento cinza) na cidade e no pátio militar de cada base:
+	-- tira o "gramado infinito" e deixa a grama só nos parques e no campo.
+	PropKit.block(map, CFrame.new(0, 0.03, 0), Vector3.new(232, 0.06, 600), C.Pavement, Enum.Material.Pavement, true).Name = "UrbanGround"
 
 	-- Ruas
 	PropKit.road(map, Vector3.new(0, 0, 0), 600, 18, true) -- avenida central N-S

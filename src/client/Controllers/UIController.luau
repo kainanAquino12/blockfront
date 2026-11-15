@@ -30,21 +30,22 @@ local WeaponConfig = require(ReplicatedStorage.Shared.Config.WeaponConfig)
 local MatchConfig = require(ReplicatedStorage.Shared.Config.MatchConfig)
 local Remotes = require(ReplicatedStorage.Shared.Modules.Remotes)
 local WeaponController = require(script.Parent.WeaponController)
-local ViewmodelController = require(script.Parent.ViewmodelController)
+local AimController = require(script.Parent.AimController)
 
 local player = Players.LocalPlayer
 
 local UIController = {}
 
 local THEME = {
-	Panel = Color3.fromRGB(20, 23, 31),
-	PanelLight = Color3.fromRGB(36, 41, 54),
-	Text = Color3.fromRGB(240, 242, 248),
-	Muted = Color3.fromRGB(150, 158, 176),
+	Panel = Color3.fromRGB(14, 16, 18),
+	PanelLight = Color3.fromRGB(44, 48, 52),
+	Text = Color3.fromRGB(232, 232, 226),
+	Muted = Color3.fromRGB(150, 152, 146),
 	Blue = GameConfig.Teams.Blue.Color,
 	Red = GameConfig.Teams.Red.Color,
-	Neutral = Color3.fromRGB(220, 220, 220),
-	Danger = Color3.fromRGB(255, 92, 72),
+	Neutral = Color3.fromRGB(190, 190, 184),
+	Danger = Color3.fromRGB(222, 86, 70),
+	Health = Color3.fromRGB(150, 196, 120),
 	Font = Enum.Font.GothamBlack,
 	FontBody = Enum.Font.GothamBold,
 }
@@ -74,7 +75,7 @@ end
 
 local function panel(props): Frame
 	props.BackgroundColor3 = props.BackgroundColor3 or THEME.Panel
-	props.BackgroundTransparency = props.BackgroundTransparency or 0.15
+	props.BackgroundTransparency = props.BackgroundTransparency or 0.38
 	props.BorderSizePixel = 0
 	return make("Frame", props, { corner() })
 end
@@ -132,7 +133,7 @@ local function buildTop()
 		Name = "Top",
 		AnchorPoint = Vector2.new(0.5, 0),
 		Position = UDim2.new(0.5, 0, 0, 10),
-		Size = UDim2.fromOffset(380, 92),
+		Size = UDim2.fromOffset(280, 76),
 		BackgroundTransparency = 1,
 		Parent = gui,
 	})
@@ -142,12 +143,18 @@ local function buildTop()
 			Name = name,
 			AnchorPoint = Vector2.new(anchor, 0),
 			Position = UDim2.new(x, 0, 0, 0),
-			Size = UDim2.fromOffset(120, 52),
-			BackgroundColor3 = color,
-			BackgroundTransparency = 0.05,
+			Size = UDim2.fromOffset(86, 40),
 			Parent = top,
 		})
-		refs[name] = label({ Size = UDim2.new(1, -12, 1, -10), Position = UDim2.fromOffset(6, 5), Text = "0", Parent = box })
+		make("Frame", {
+			AnchorPoint = Vector2.new(0, 1),
+			Position = UDim2.new(0, 0, 1, 0),
+			Size = UDim2.new(1, 0, 0, 3),
+			BackgroundColor3 = color,
+			BorderSizePixel = 0,
+			Parent = box,
+		})
+		refs[name] = label({ Size = UDim2.new(1, -16, 1, -14), Position = UDim2.fromOffset(8, 5), Text = "0", TextColor3 = color:Lerp(Color3.new(1, 1, 1), 0.25), Parent = box })
 	end
 	scoreBox("ScoreBlue", THEME.Blue, 0, 0)
 	scoreBox("ScoreRed", THEME.Red, 1, 1)
@@ -155,13 +162,13 @@ local function buildTop()
 	local timer = panel({
 		AnchorPoint = Vector2.new(0.5, 0),
 		Position = UDim2.new(0.5, 0, 0, 0),
-		Size = UDim2.fromOffset(124, 52),
+		Size = UDim2.fromOffset(92, 40),
 		Parent = top,
 	})
-	refs.Timer = label({ Size = UDim2.new(1, -16, 0.62, 0), Position = UDim2.fromOffset(8, 4), Text = "0:00", Parent = timer })
+	refs.Timer = label({ Size = UDim2.new(1, -20, 0.58, 0), Position = UDim2.fromOffset(10, 4), Text = "0:00", Parent = timer })
 	refs.ToWin = label({
-		Size = UDim2.new(1, -16, 0.28, 0),
-		Position = UDim2.new(0, 8, 0.66, 0),
+		Size = UDim2.new(1, -24, 0.24, 0),
+		Position = UDim2.new(0, 12, 0.66, 0),
 		Font = THEME.FontBody,
 		TextColor3 = THEME.Muted,
 		Text = "META " .. MatchConfig.ScoreToWin,
@@ -171,14 +178,14 @@ local function buildTop()
 	-- Objetivos: um selo por ponto de captura (A, B, C)
 	local row = make("Frame", {
 		AnchorPoint = Vector2.new(0.5, 0),
-		Position = UDim2.new(0.5, 0, 0, 58),
-		Size = UDim2.fromOffset(#MatchConfig.CapturePoints * 64, 34),
+		Position = UDim2.new(0.5, 0, 0, 46),
+		Size = UDim2.fromOffset(#MatchConfig.CapturePoints * 44, 26),
 		BackgroundTransparency = 1,
 		Parent = top,
 	}, { make("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, HorizontalAlignment = Enum.HorizontalAlignment.Center, Padding = UDim.new(0, 6), SortOrder = Enum.SortOrder.LayoutOrder }) })
 	refs.Points = {}
 	for i, def in MatchConfig.CapturePoints do
-		local pill = panel({ Size = UDim2.fromOffset(56, 34), LayoutOrder = i, Parent = row })
+		local pill = panel({ Size = UDim2.fromOffset(38, 24), LayoutOrder = i, Parent = row })
 		local bg = make("Frame", {
 			Position = UDim2.fromOffset(3, 3),
 			Size = UDim2.new(1, -6, 1, -6),
@@ -204,8 +211,8 @@ local function buildTop()
 	-- Faixa de fase
 	refs.Banner = label({
 		AnchorPoint = Vector2.new(0.5, 0),
-		Position = UDim2.new(0.5, 0, 0, 108),
-		Size = UDim2.fromOffset(520, 34),
+		Position = UDim2.new(0.5, 0, 0, 86),
+		Size = UDim2.fromOffset(460, 28),
 		Text = "",
 		Parent = gui,
 	})
@@ -217,34 +224,34 @@ local function buildPlayerPanel()
 		Name = "Player",
 		AnchorPoint = Vector2.new(0, 1),
 		Position = UDim2.new(0, 16, 1, -16),
-		Size = UDim2.fromOffset(270, 70),
+		Size = UDim2.fromOffset(230, 52),
 		Parent = gui,
 	})
 	refs.TeamTag = panel({
-		Position = UDim2.fromOffset(8, 8),
-		Size = UDim2.fromOffset(120, 22),
+		Position = UDim2.fromOffset(8, 7),
+		Size = UDim2.fromOffset(96, 16),
 		BackgroundColor3 = THEME.Neutral,
 		BackgroundTransparency = 0,
 		Parent = p,
 	})
 	refs.TeamText = label({ Size = UDim2.new(1, -10, 1, -6), Position = UDim2.fromOffset(5, 3), Text = "—", Parent = refs.TeamTag })
 	local bg = make("Frame", {
-		Position = UDim2.fromOffset(8, 38),
-		Size = UDim2.new(1, -70, 0, 22),
+		Position = UDim2.fromOffset(8, 30),
+		Size = UDim2.new(1, -64, 0, 14),
 		BackgroundColor3 = THEME.PanelLight,
 		BorderSizePixel = 0,
 		Parent = p,
 	}, { corner(3) })
 	refs.HealthFill = make("Frame", {
 		Size = UDim2.fromScale(1, 1),
-		BackgroundColor3 = Color3.fromRGB(110, 220, 120),
+		BackgroundColor3 = THEME.Health,
 		BorderSizePixel = 0,
 		Parent = bg,
 	}, { corner(3) })
 	refs.HealthText = label({
 		AnchorPoint = Vector2.new(1, 0),
-		Position = UDim2.new(1, -8, 0, 36),
-		Size = UDim2.fromOffset(54, 26),
+		Position = UDim2.new(1, -8, 0, 25),
+		Size = UDim2.fromOffset(48, 22),
 		Text = "100",
 		Parent = p,
 	})
@@ -255,29 +262,30 @@ local function buildWeaponPanel()
 		Name = "Weapon",
 		AnchorPoint = Vector2.new(1, 1),
 		Position = UDim2.new(1, -16, 1, -16),
-		Size = UDim2.fromOffset(250, 76),
+		Size = UDim2.fromOffset(210, 62),
 		Parent = gui,
 	})
 	refs.WeaponPanel = p
 	refs.WeaponName = label({
 		Position = UDim2.fromOffset(10, 6),
-		Size = UDim2.new(1, -20, 0, 18),
+		Size = UDim2.new(1, -20, 0, 14),
+		Font = THEME.FontBody,
 		TextXAlignment = Enum.TextXAlignment.Left,
 		TextColor3 = THEME.Muted,
 		Text = "",
 		Parent = p,
 	})
 	refs.Ammo = label({
-		Position = UDim2.fromOffset(10, 26),
-		Size = UDim2.fromOffset(110, 42),
+		Position = UDim2.fromOffset(10, 22),
+		Size = UDim2.fromOffset(90, 34),
 		TextXAlignment = Enum.TextXAlignment.Left,
 		Text = "",
 		Parent = p,
 	})
 	refs.Reserve = label({
 		AnchorPoint = Vector2.new(1, 0),
-		Position = UDim2.new(1, -10, 0, 38),
-		Size = UDim2.fromOffset(110, 26),
+		Position = UDim2.new(1, -10, 0, 32),
+		Size = UDim2.fromOffset(100, 20),
 		TextXAlignment = Enum.TextXAlignment.Right,
 		TextColor3 = THEME.Muted,
 		Text = "",
@@ -288,14 +296,14 @@ local function buildWeaponPanel()
 	local list = make("Frame", {
 		Name = "Slots",
 		AnchorPoint = Vector2.new(1, 1),
-		Position = UDim2.new(1, -16, 1, -100),
-		Size = UDim2.fromOffset(200, 5 * 24),
+		Position = UDim2.new(1, -16, 1, -84),
+		Size = UDim2.fromOffset(170, 5 * 20),
 		BackgroundTransparency = 1,
 		Parent = gui,
 	}, { make("UIListLayout", { Padding = UDim.new(0, 3), HorizontalAlignment = Enum.HorizontalAlignment.Right, SortOrder = Enum.SortOrder.LayoutOrder }) })
 	refs.Slots = {}
 	for i = 1, 5 do
-		local row = panel({ Size = UDim2.fromOffset(180, 21), LayoutOrder = i, BackgroundTransparency = 0.45, Parent = list })
+		local row = panel({ Size = UDim2.fromOffset(150, 17), LayoutOrder = i, BackgroundTransparency = 0.6, Parent = list })
 		local text = label({
 			Position = UDim2.fromOffset(8, 3),
 			Size = UDim2.new(1, -16, 1, -6),
@@ -471,8 +479,8 @@ local function updateCombatUI(dt: number)
 	local hp = humanoid and humanoid.Health or 0
 	local alive = hp > 0
 	local state = WeaponController.getState()
-	local scoped = ViewmodelController.isScoped()
-	local aimA = ViewmodelController.getAimAlpha()
+	local scoped = AimController.isScoped()
+	local aimA = AimController.getAlpha()
 	local menuOpen = refs.MenuOpen == true
 
 	refs.Scope.Visible = alive and scoped and not menuOpen
@@ -485,9 +493,9 @@ local function updateCombatUI(dt: number)
 		local half = math.tan(math.rad(camera.FieldOfView / 2))
 		local gap = math.tan(math.rad(spread)) / half * (camera.ViewportSize.Y / 2)
 		gap = math.clamp(gap + 4, 4, 120)
-		local barsAlpha = math.clamp(aimA * 1.4, 0, 1) -- some ao mirar (fica o ponto)
+		local barsAlpha = math.clamp(aimA * 1.6, 0, 1) -- some ao mirar (a mira de ferro assume)
 		local isMelee = state.Weapon.Kind == "Melee" or state.Weapon.Kind == "Throwable"
-		local len, thick = 9, 2
+		local len, thick = 10, 3
 		local defs = {
 			{ UDim2.fromOffset(0, -gap - len / 2), UDim2.fromOffset(thick, len) },
 			{ UDim2.fromOffset(0, gap + len / 2), UDim2.fromOffset(thick, len) },
@@ -498,10 +506,11 @@ local function updateCombatUI(dt: number)
 			bar.Position = defs[i][1]
 			bar.Size = defs[i][2]
 			bar.BackgroundTransparency = if isMelee then 1 else barsAlpha
-			bar.UIStroke.Transparency = if isMelee then 1 else 0.4 + barsAlpha * 0.6
+			bar.UIStroke.Transparency = if isMelee then 1 else 0.1 + barsAlpha * 0.9
 		end
-		refs.Dot.Size = if aimA > 0.5 then UDim2.fromOffset(4, 4) else UDim2.fromOffset(3, 3)
-		refs.Dot.BackgroundColor3 = if aimA > 0.5 then Color3.fromRGB(255, 90, 90) else Color3.new(1, 1, 1)
+		refs.Dot.Size = UDim2.fromOffset(4, 4)
+		refs.Dot.BackgroundTransparency = barsAlpha
+		refs.Dot.UIStroke.Transparency = 0.1 + barsAlpha * 0.9
 	end
 
 	-- Recarga
@@ -679,6 +688,7 @@ end
 local function updatePlayer()
 	local team = player.Team and player.Team.Name
 	refs.TeamTag.BackgroundColor3 = teamColor(team)
+	refs.TeamTag.BackgroundTransparency = 0.15
 	refs.TeamText.Text = if team then GameConfig.Teams[team].DisplayName else "SEM TIME"
 
 	local character = player.Character
@@ -688,8 +698,8 @@ local function updatePlayer()
 	local ratio = math.clamp(hp / math.max(max, 1), 0, 1)
 	refs.HealthFill.Size = UDim2.fromScale(ratio, 1)
 	refs.HealthFill.BackgroundColor3 = if ratio > 0.5
-		then Color3.fromRGB(110, 220, 120)
-		elseif ratio > 0.25 then Color3.fromRGB(250, 200, 70)
+		then THEME.Health
+		elseif ratio > 0.25 then Color3.fromRGB(214, 176, 82)
 		else THEME.Danger
 	refs.HealthText.Text = tostring(math.ceil(hp))
 end
@@ -726,7 +736,7 @@ local function updateSlots()
 			local active = current ~= nil and w ~= nil and current.Weapon == w
 			r.text.Text = upper(w and w.DisplayName or t.Name) .. "   " .. i
 			r.text.TextColor3 = if active then THEME.Text else THEME.Muted
-			r.row.BackgroundTransparency = if active then 0.1 else 0.55
+			r.row.BackgroundTransparency = if active then 0.25 else 0.7
 		end
 	end
 end

@@ -322,6 +322,54 @@ local function build()
 			SettingsController.setSensitivity(SettingsController.getSensitivity() + delta)
 		end)
 	end
+	-- Campo de visão
+	local fovRow = sens:Clone()
+	fovRow.Position = UDim2.new(0.5, 0, 0.44, 290)
+	fovRow.Parent = gui
+	for _, c in fovRow:GetChildren() do
+		c:Destroy()
+	end
+	make("TextLabel", {
+		Size = UDim2.fromOffset(150, 34),
+		BackgroundTransparency = 1,
+		Font = Enum.Font.GothamBold,
+		TextScaled = true,
+		TextColor3 = Color3.fromRGB(170, 178, 196),
+		Text = "CAMPO DE VISÃO",
+		Parent = fovRow,
+	})
+	local fovValue = make("TextLabel", {
+		Position = UDim2.fromOffset(200, 0),
+		Size = UDim2.fromOffset(70, 34),
+		BackgroundTransparency = 1,
+		Font = Enum.Font.GothamBlack,
+		TextScaled = true,
+		TextColor3 = Color3.new(1, 1, 1),
+		Text = "",
+		Parent = fovRow,
+	})
+	for _, def in { { "-", 160, -SettingsController.FovStep }, { "+", 276, SettingsController.FovStep } } do
+		local b = make("TextButton", {
+			Position = UDim2.fromOffset(def[2], 0),
+			Size = UDim2.fromOffset(34, 34),
+			BackgroundColor3 = Color3.fromRGB(36, 41, 54),
+			Font = Enum.Font.GothamBlack,
+			TextScaled = true,
+			TextColor3 = Color3.new(1, 1, 1),
+			Text = def[1],
+			Parent = fovRow,
+		})
+		make("UICorner", { CornerRadius = UDim.new(0, 4), Parent = b })
+		b.Activated:Connect(function()
+			SettingsController.setFov(SettingsController.getFov() + def[3])
+		end)
+	end
+	local function refreshFov()
+		fovValue.Text = tostring(SettingsController.getFov())
+	end
+	SettingsController.Changed:Connect(refreshFov)
+	refreshFov()
+
 	sensButton("-", 160, -SettingsController.SensitivityStep)
 	sensButton("+", 276, SettingsController.SensitivityStep)
 	local function refreshSens()
@@ -332,7 +380,7 @@ local function build()
 
 	local auto = make("TextButton", {
 		AnchorPoint = Vector2.new(0.5, 0),
-		Position = UDim2.new(0.5, 0, 0.44, 300),
+		Position = UDim2.new(0.5, 0, 0.44, 336),
 		Size = UDim2.fromOffset(240, 44),
 		BackgroundColor3 = Color3.fromRGB(36, 41, 54),
 		Font = Enum.Font.GothamBlack,

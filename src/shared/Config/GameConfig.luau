@@ -11,13 +11,13 @@ GameConfig.Teams = {
 		Name = "Blue",
 		DisplayName = "BLUE TEAM",
 		TeamColor = BrickColor.new("Bright blue"),
-		Color = Color3.fromRGB(46, 120, 255),
+		Color = Color3.fromRGB(64, 118, 214),
 	},
 	Red = {
 		Name = "Red",
 		DisplayName = "RED TEAM",
 		TeamColor = BrickColor.new("Bright red"),
-		Color = Color3.fromRGB(255, 64, 64),
+		Color = Color3.fromRGB(206, 72, 60),
 	},
 }
 

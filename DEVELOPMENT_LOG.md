@@ -36,3 +36,23 @@ Depois do último commit, o place foi salvo com a prévia do mapa (arquivo gerad
 
 Multijogador real, sensação de câmera e recuo, qualidade dos sons, FPS com a janela em foco, escada das torres,
 SMG e metralhadora em jogo, mobile e gamepad.
+
+
+## 2026-11-15 — V3: reconstrução visual e FPS ("stylized military voxel")
+
+Backup: tag git `pre-v3`. Diagnóstico em `docs/AUDIT_V3.md`. Prints em `docs/prints_v3/`.
+
+- Arte: paleta dessaturada (`MaterialConfig`, `PropKit`, cores dos times), materiais novos Stone/Awning/DarkMetal,
+  iluminação de fim de tarde com ColorCorrection Saturation -0.12 (`MapManager.applyEnvironment`), calçamento urbano.
+- Arquitetura: `StructureKit.facadeBuilding` (pilares, cornijas, base, peitoris, marquises, toldos de loja, sacadas
+  com guarda-corpo) aplicado a todos os prédios via `MapLayout.B`.
+- Câmera: FOV configurável 70–100 no menu (`SettingsController.getFov/setFov`, linha nova em `TeamSelectController`).
+- Viewmodel: armas menores e no canto inferior direito (poses em `WeaponConfig`), antebraço proporcional + luva.
+- Mira: `AimController` novo (fonte única do ADS); alças vazadas; retículo 10x3 com contorno forte que some no ADS.
+- HUD: painéis escuros translúcidos, placar menor com faixa da cor do time, pílulas A/B/C menores, painéis de vida/arma compactos.
+- Testado no Studio: ADS do rifle/pistola/RPG com mouse real, destruição por foguete em fachada nova,
+  Output sem erros de script, 60 FPS de física, ~18 mil Parts em jogo.
+
+Arquivos modificados: ClientMain, AimController (novo), CameraController, DestructionEffects, SettingsController,
+TeamSelectController, UIController, ViewmodelController, WeaponController, MapManager, MapLayout, PropKit,
+StructureKit, GameConfig, MaterialConfig, WeaponConfig, WeaponModels.

@@ -224,3 +224,11 @@ Leia, entenda e teste antes e depois de mexer:
 > Os arquivos da seção 12 só devem ser alterados depois de entender o formato dos dados e testar.
 > Trabalhe em passos pequenos, teste cada sistema, faça commit a cada etapa estável,
 > e diga ao dono só o que você realmente testou.
+
+
+## Atualização V3 (2026-11-15)
+
+- ADS tem **uma** fonte de verdade: `src/client/Controllers/AimController.luau`. Não volte a guardar estado de mira em outros scripts.
+- Prédios novos devem usar `B{...}` em `MapLayout` (que chama `StructureKit.facadeBuilding`), não `StructureKit.building` direto.
+- FOV do jogador: atributo `FieldOfView` (padrão 80) via `SettingsController`.
+- Ver `DEVELOPMENT_LOG.md` (entrada V3) para a lista de arquivos e `KNOWN_BUGS.md` para o que falta testar.

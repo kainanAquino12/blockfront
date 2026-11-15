@@ -526,4 +526,110 @@ function StructureKit.hay(width: number, depth: number)
 	}
 end
 
+--[[
+	Prédio com fachada em profundidade (direção V3).
+	Envolve StructureKit.building com uma casca externa de 1 célula, onde ficam:
+	  - embasamento de pedra no térreo
+	  - pilastras nos cantos e entre as janelas
+	  - cornijas (faixas) em cada laje e no topo
+	  - peitoris salientes sob cada janela
+	  - marquise sobre as portas e toldo sobre vitrines
+	  - guarda-corpos metálicos nas janelas dos andares superiores (Balconies)
+	As janelas ficam recuadas 1 célula em relação à casca, criando sombra e
+	volume. Tudo continua voxel e destrutível; a casca se apoia na parede.
+
+	Opções extras (além das de building):
+	  Accent: material das pilastras/cornijas (padrão Stone)
+	  Base: material do embasamento (padrão Concrete)
+	  Balconies: face com guarda-corpos ("S", "N", "W", "E") ou nil
+	  PilasterEvery: período das pilastras ao longo da fachada (padrão = WindowSpacing)
+]]
+function StructureKit.facadeBuilding(o)
+	local inner = StructureKit.building(o)
+	local sx, sy, sz = inner.Size.X, inner.Size.Y, inner.Size.Z
+	local H = o.FloorHeight or DEFAULT_FLOOR_HEIGHT
+	local roofY = o.Floors * H
+	local spacing = o.WindowSpacing or 4
+	local pil = o.PilasterEvery or spacing
+	local accent = o.Accent or M.Stone
+	local base = o.Base or M.Concrete
+	local doors = setOf(o.Doors)
+	local woodDoors = setOf(o.WoodDoors)
+	local gable = o.Gable == true
+	local topY = if gable then roofY else roofY + 1
+
+	local function fill(x: number, y: number, z: number): number
+		local ix, iz = x - 1, z - 1
+		local insideX = ix >= 0 and ix < sx
+		local insideZ = iz >= 0 and iz < sz
+		if insideX and insideZ then
+			return inner.Fill(ix, y, iz)
+		end
+		if y > topY then
+			return 0
+		end
+		-- canto externo da casca: pilar de canto
+		if not insideX and not insideZ then
+			return accent
+		end
+		-- face e coordenada ao longo dela (no sistema do miolo)
+		local face, a, len
+		if iz < 0 then
+			face, a, len = "S", ix, sx
+		elseif iz >= sz then
+			face, a, len = "N", sx - 1 - ix, sx
+		elseif ix < 0 then
+			face, a, len = "W", sz - 1 - iz, sz
+		else
+			face, a, len = "E", iz, sz
+		end
+		local level = y // H
+		local ly = y - level * H
+		local mid = len // 2
+		local isDoor = level == 0 and (doors[face] or woodDoors[face]) and math.abs(a - mid) <= 1
+		local windowCol = a >= 2 and a <= len - 3 and (a % spacing == 1 or a % spacing == 2)
+
+		-- porta: vão livre; marquise logo acima
+		if isDoor and ly <= 5 then
+			return 0
+		end
+		if level == 0 and (doors[face] or woodDoors[face]) and math.abs(a - mid) <= 3 and ly == 6 then
+			return M.Awning
+		end
+		-- toldo sobre vitrine
+		if level == 0 and face == o.ShopFront and a >= 2 and a <= len - 3 and ly == 5 then
+			return M.Awning
+		end
+		-- embasamento
+		if y == 0 then
+			return base
+		end
+		-- cornijas: em cada laje e no topo
+		if (y > 0 and y % H == 0 and y <= roofY) or y == topY then
+			return accent
+		end
+		-- pilastras entre janelas (nunca na frente de uma janela)
+		if a % pil == 0 and not windowCol then
+			return accent
+		end
+		if windowCol and not (level == 0 and face == o.ShopFront) then
+			-- peitoril saliente
+			if ly == 1 then
+				return accent
+			end
+			-- guarda-corpo (balaústres alternados) nos andares de cima
+			if o.Balconies == face and level >= 1 and ly == 2 and a % 2 == 1 then
+				return M.DarkMetal
+			end
+		end
+		return 0
+	end
+
+	return {
+		Size = Vector3.new(sx + 2, sy, sz + 2),
+		Fill = fill,
+		Offset = Vector3.new(-1, 0, -1),
+	}
+end
+
 return StructureKit

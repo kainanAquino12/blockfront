@@ -30,6 +30,7 @@ local WeaponMath = require(ReplicatedStorage.Shared.Modules.WeaponMath)
 local CameraController = require(script.Parent.CameraController)
 local MovementController = require(script.Parent.MovementController)
 local ViewmodelController = require(script.Parent.ViewmodelController)
+local AimController = require(script.Parent.AimController)
 local AudioController = require(script.Parent.AudioController)
 local CombatEffects = require(script.Parent.CombatEffects)
 
@@ -82,7 +83,7 @@ function WeaponController.getSpread(): number
 		return 0
 	end
 	local sp = weapon.Spread
-	local aim = ViewmodelController.getAimAlpha()
+	local aim = AimController.getAlpha()
 	local base = sp.Hip + (sp.Aim - sp.Hip) * aim
 	return base + sp.Move * MovementController.getMoveFactor() * (1 - aim * 0.6) + bloom
 end
@@ -90,9 +91,11 @@ end
 -- Bloqueia a entrada das armas (menu aberto).
 function WeaponController.setBlocked(value: boolean)
 	menuBlocked = value
+	AimController.setBlocked(value)
 	if value then
 		triggerDown = false
 		aimHeld = false
+		AimController.setHeld(false)
 	end
 end
 
@@ -317,7 +320,6 @@ local function equip(t: Tool)
 	localAmmo = t:GetAttribute("Ammo") or 0
 	readyAt = os.clock() + (w.Viewmodel and w.Viewmodel.EquipTime or 0.3)
 	ViewmodelController.setWeapon(w.Id)
-	ViewmodelController.setAiming(aimHeld)
 	MovementController.setWeaponMultiplier(w.WalkMultiplier or 1)
 	AudioController.play(w.Sounds.Equip, nil, { Volume = 0.5 })
 
@@ -333,10 +335,8 @@ local function equip(t: Tool)
 		local r = t:GetAttribute("Reloading") == true
 		if r then
 			reloadStart = os.clock()
-			ViewmodelController.setAiming(false)
 		else
 			localAmmo = t:GetAttribute("Ammo") or 0
-			ViewmodelController.setAiming(aimHeld)
 		end
 		MovementController.setReloading(r)
 		changed:Fire()
@@ -397,9 +397,7 @@ function WeaponController.init()
 			fire()
 		elseif input.UserInputType == Enum.UserInputType.MouseButton2 then
 			aimHeld = true
-			if not (tool and tool:GetAttribute("Reloading")) then
-				ViewmodelController.setAiming(true)
-			end
+			AimController.setHeld(true)
 		elseif input.KeyCode == Enum.KeyCode.R then
 			requestReload()
 		elseif keySlots[input.KeyCode] then
@@ -411,7 +409,7 @@ function WeaponController.init()
 			triggerDown = false
 		elseif input.UserInputType == Enum.UserInputType.MouseButton2 then
 			aimHeld = false
-			ViewmodelController.setAiming(false)
+			AimController.setHeld(false)
 		end
 	end)
 	UserInputService.InputChanged:Connect(function(input, processed)
@@ -433,12 +431,6 @@ function WeaponController.init()
 	RunService.RenderStepped:Connect(function(dt)
 		if weapon then
 			bloom = math.max(0, bloom - weapon.Spread.BloomRecovery * dt)
-			MovementController.setAiming(ViewmodelController.isAiming())
-			if ViewmodelController.isAiming() and MovementController.isSprinting() then
-				ViewmodelController.setAiming(false)
-			elseif aimHeld and not ViewmodelController.isAiming() and not MovementController.isSprinting() and not (tool and tool:GetAttribute("Reloading")) then
-				ViewmodelController.setAiming(true)
-			end
 		end
 		if triggerDown and weapon and weapon.Automatic then
 			fire()

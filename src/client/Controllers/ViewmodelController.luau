@@ -32,15 +32,19 @@ local WeaponConfig = require(ReplicatedStorage.Shared.Config.WeaponConfig)
 local WeaponModels = require(ReplicatedStorage.Shared.Modules.WeaponModels)
 local CameraController = require(script.Parent.CameraController)
 local MovementController = require(script.Parent.MovementController)
+local AimController = require(script.Parent.AimController)
 
 local player = Players.LocalPlayer
 
 local ViewmodelController = {}
 
 local GLOVE = Color3.fromRGB(46, 48, 56)
-local ELBOW_R = Vector3.new(0.5, -1.05, -0.35)
-local ELBOW_L = Vector3.new(-0.32, -1.1, -0.55)
-local ARM_WIDTH = 0.2
+-- Antebraço: sai da mão em direção ao cotovelo (fora da tela, embaixo), no
+-- espaço da câmera. Comprimento e espessura fixos em studs, proporcionais à arma.
+local FOREARM_DIR_R = Vector3.new(0.22, -0.62, 0.75).Unit
+local FOREARM_DIR_L = Vector3.new(-0.32, -0.58, 0.75).Unit
+local FOREARM_LEN = 0.62
+local ARM_WIDTH = 0.12
 local SPRINT_POSE = CFrame.new(0.06, -0.14, 0.05) * CFrame.Angles(math.rad(-18), math.rad(38), math.rad(16))
 
 local folder: Model
@@ -55,8 +59,7 @@ local arms: { [string]: BasePart } = {}
 
 -- Estado das animações
 local equipAlpha = 0
-local aimAlpha = 0
-local aiming = false
+local aimAlpha = 0 -- cópia local do AimController.getAlpha() a cada quadro
 local reloadAlpha = 0
 local reloadStart = 0
 local wasReloading = false
@@ -131,7 +134,7 @@ end
 
 function ViewmodelController.setWeapon(id: string?)
 	clearModel()
-	aiming = false
+	AimController.setWeapon(false)
 	if not id then
 		return
 	end
@@ -166,8 +169,10 @@ function ViewmodelController.setWeapon(id: string?)
 		local s = h.CFrame:PointToObjectSpace(sight.WorldPosition)
 		aimPose = CFrame.new(-s.X, -s.Y, -vm.AimDistance - s.Z)
 	end
+	AimController.setWeapon(aimPose ~= nil, vm.AimFov, vm.AimSensitivity, vm.Scope)
 
-	local color = teamColor()
+	-- manga: cor do time escurecida (uniforme), não a cor pura do time
+	local color = teamColor():Lerp(Color3.fromRGB(40, 44, 40), 0.45)
 	arms.SleeveR.Color = color
 	arms.SleeveL.Color = color
 	setArmsVisible(true, h:FindFirstChild("LeftHand") ~= nil)
@@ -182,21 +187,6 @@ function ViewmodelController.canAim(): boolean
 	return aimPose ~= nil
 end
 
-function ViewmodelController.setAiming(on: boolean)
-	aiming = on and aimPose ~= nil
-end
-
-function ViewmodelController.isAiming(): boolean
-	return aiming
-end
-
-function ViewmodelController.getAimAlpha(): number
-	return aimAlpha
-end
-
-function ViewmodelController.isScoped(): boolean
-	return weapon ~= nil and vm ~= nil and vm.Scope == true and aimAlpha > 0.9
-end
 
 -- Recuo visual do disparo (o recuo da câmera é do CameraController).
 function ViewmodelController.kick()
@@ -229,10 +219,10 @@ function ViewmodelController.getMuzzlePosition(): Vector3?
 	return muzzle and muzzle.WorldPosition
 end
 
-local function placeArm(sleeve: BasePart, hand: BasePart, elbow: Vector3, handCF: CFrame)
+local function placeArm(sleeve: BasePart, hand: BasePart, camCF: CFrame, dir: Vector3, handCF: CFrame)
 	local handPos = handCF.Position
-	local len = (handPos - elbow).Magnitude
-	sleeve.Size = Vector3.new(ARM_WIDTH, ARM_WIDTH, math.max(len - 0.05, 0.05))
+	local elbow = handPos + camCF:VectorToWorldSpace(dir) * FOREARM_LEN
+	sleeve.Size = Vector3.new(ARM_WIDTH, ARM_WIDTH, FOREARM_LEN)
 	sleeve.CFrame = CFrame.lookAt((elbow + handPos) / 2, handPos)
 	hand.CFrame = handCF
 end
@@ -256,8 +246,7 @@ local function render(dt: number)
 	local character = player.Character
 	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
 
-	aimAlpha = lerp(aimAlpha, if aiming then 1 else 0, math.min(dt * 13, 1))
-	CameraController.setAim(aimAlpha, vm and vm.AimFov or 80, vm and vm.AimSensitivity or 1)
+	aimAlpha = AimController.getAlpha()
 
 	if not model or not handle or not vm or not humanoid or humanoid.Health <= 0 then
 		if model and humanoid and humanoid.Health <= 0 then
@@ -399,7 +388,7 @@ local function render(dt: number)
 	-- Braços: antebraços do cotovelo (fora da tela) até as mãos
 	local sScale = vm.Scale
 	local handRCF = final * CFrame.new(0, -0.08 * sScale, 0.05 * sScale)
-	placeArm(arms.SleeveR, arms.HandR, camCF:PointToWorldSpace(ELBOW_R), handRCF)
+	placeArm(arms.SleeveR, arms.HandR, camCF, FOREARM_DIR_R, handRCF)
 	local lh = handle:FindFirstChild("LeftHand") :: Attachment?
 	if lh then
 		local handLCF = CFrame.new(lh.WorldPosition) * final.Rotation
@@ -409,10 +398,10 @@ local function render(dt: number)
 			local away = math.sin(math.clamp((p - 0.15) / 0.7, 0, 1) * math.pi)
 			handLCF = handLCF * CFrame.new(0, -0.35 * away, 0.25 * away)
 		end
-		placeArm(arms.SleeveL, arms.HandL, camCF:PointToWorldSpace(ELBOW_L), handLCF)
+		placeArm(arms.SleeveL, arms.HandL, camCF, FOREARM_DIR_L, handLCF)
 	end
 
-	setHidden(ViewmodelController.isScoped())
+	setHidden(AimController.isScoped())
 end
 
 function ViewmodelController.init()
@@ -422,8 +411,8 @@ function ViewmodelController.init()
 	folder.Parent = camera
 	arms.SleeveR = makeArmPart("SleeveR", teamColor(), Vector3.new(ARM_WIDTH, ARM_WIDTH, 1))
 	arms.SleeveL = makeArmPart("SleeveL", teamColor(), Vector3.new(ARM_WIDTH, ARM_WIDTH, 1))
-	arms.HandR = makeArmPart("HandR", GLOVE, Vector3.new(0.13, 0.15, 0.16))
-	arms.HandL = makeArmPart("HandL", GLOVE, Vector3.new(0.13, 0.15, 0.16))
+	arms.HandR = makeArmPart("HandR", GLOVE, Vector3.new(0.11, 0.13, 0.14))
+	arms.HandL = makeArmPart("HandL", GLOVE, Vector3.new(0.11, 0.13, 0.14))
 	RunService:BindToRenderStep("BlockfrontViewmodel", Enum.RenderPriority.Camera.Value + 1, render)
 end
 

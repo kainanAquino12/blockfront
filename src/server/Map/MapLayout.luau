@@ -31,7 +31,18 @@
 local StructureKit = require(script.Parent.StructureKit)
 local PropKit = require(script.Parent.PropKit)
 local M = StructureKit.Materials
-local B = StructureKit.building
+-- Prédios usam a fachada com profundidade (V3). Prédios de 3+ andares ganham
+-- guarda-corpos na face da primeira porta; casas com telhado de duas águas
+-- ganham embasamento e pilastras de tijolo escuro.
+local function B(o)
+	if o.Floors >= 3 and o.Balconies == nil then
+		o.Balconies = o.Doors and o.Doors[1]
+	end
+	if o.Gable and o.Accent == nil then
+		o.Accent = M.DarkBrick
+	end
+	return StructureKit.facadeBuilding(o)
+end
 
 local MapLayout = {}
 

@@ -59,8 +59,11 @@ do
 		{ Vector3.new(0.32, 0.3, 1.5), Vector3.new(0, 0.74, -0.2), C.Dark }, -- receptor superior
 		{ Vector3.new(0.03, 0.12, 0.36), Vector3.new(0.17, 0.74, -0.1), C.Light }, -- janela de ejeção
 		{ Vector3.new(0.14, 0.08, 0.2), Vector3.new(0, 0.86, 0.48), C.Black }, -- alavanca de manejo
-		{ Vector3.new(0.18, 0.26, 0.2), Vector3.new(0, 1.02, 0.36), C.Black }, -- alça de mira
-		{ Vector3.new(0.06, 0.08, 0.06), Vector3.new(0, 1.18, 0.36), C.Black }, -- entalhe
+		{ Vector3.new(0.050, 0.220, 0.10), Vector3.new(-0.085, 1.170, 0.36), C.Black }, -- alça vazada
+		{ Vector3.new(0.050, 0.220, 0.10), Vector3.new(0.085, 1.170, 0.36), C.Black },
+		{ Vector3.new(0.220, 0.050, 0.10), Vector3.new(0.000, 1.085, 0.36), C.Black },
+		{ Vector3.new(0.220, 0.050, 0.10), Vector3.new(0.000, 1.255, 0.36), C.Black },
+		{ Vector3.new(0.14, 0.060, 0.12), Vector3.new(0.000, 1.030, 0.36), C.Black }, -- base da alça
 		{ Vector3.new(0.36, 0.38, 0.95), Vector3.new(0, 0.66, -1.4), C.Tan }, -- guarda-mão
 		{ Vector3.new(0.38, 0.06, 0.16), Vector3.new(0, 0.66, -1.15), C.TanDark }, -- ventilação
 		{ Vector3.new(0.38, 0.06, 0.16), Vector3.new(0, 0.66, -1.4), C.TanDark },
@@ -168,7 +171,11 @@ do
 		{ Vector3.new(0.26, 0.04, 0.12), Vector3.new(0, 0.6, -1.15), C.Black },
 		{ Vector3.new(0.12, 0.12, 0.4), Vector3.new(0, 0.6, -1.45), C.Black }, -- cano
 		{ Vector3.new(0.06, 0.18, 0.06), Vector3.new(0, 0.88, -1.12), C.Black }, -- massa
-		{ Vector3.new(0.14, 0.14, 0.14), Vector3.new(0, 0.87, 0.15), C.Black }, -- alça
+		{ Vector3.new(0.050, 0.200, 0.10), Vector3.new(-0.075, 0.950, 0.15), C.Black }, -- alça vazada
+		{ Vector3.new(0.050, 0.200, 0.10), Vector3.new(0.075, 0.950, 0.15), C.Black },
+		{ Vector3.new(0.200, 0.050, 0.10), Vector3.new(0.000, 0.875, 0.15), C.Black },
+		{ Vector3.new(0.200, 0.050, 0.10), Vector3.new(0.000, 1.025, 0.15), C.Black },
+		{ Vector3.new(0.14, 0.060, 0.12), Vector3.new(0.000, 0.820, 0.15), C.Black }, -- base da alça
 		{ Vector3.new(0.2, 0.9, 0.3), Vector3.new(0, -0.22, -0.5), C.Dark, nil, nil, "Mag" }, -- carregador reto
 		{ Vector3.new(0.2, 0.45, 0.22), Vector3.new(0, 0.12, -0.95), C.Black }, -- empunhadura frontal
 		{ Vector3.new(0.12, 0.12, 0.7), Vector3.new(0, 0.5, 0.55), C.Black }, -- coronha retrátil
@@ -193,7 +200,11 @@ do
 		{ Vector3.new(0.14, 0.14, 0.8), Vector3.new(0, 0.6, -2.6), C.Black }, -- cano
 		{ Vector3.new(0.22, 0.22, 0.3), Vector3.new(0, 0.6, -3.1), C.Dark }, -- quebra-chamas
 		{ Vector3.new(0.06, 0.24, 0.06), Vector3.new(0, 0.9, -2.2), C.Black }, -- massa
-		{ Vector3.new(0.18, 0.22, 0.16), Vector3.new(0, 1.01, 0.3), C.Black }, -- alça de mira
+		{ Vector3.new(0.050, 0.220, 0.10), Vector3.new(-0.085, 1.100, 0.30), C.Black }, -- alça vazada
+		{ Vector3.new(0.050, 0.220, 0.10), Vector3.new(0.085, 1.100, 0.30), C.Black },
+		{ Vector3.new(0.220, 0.050, 0.10), Vector3.new(0.000, 1.015, 0.30), C.Black },
+		{ Vector3.new(0.220, 0.050, 0.10), Vector3.new(0.000, 1.185, 0.30), C.Black },
+		{ Vector3.new(0.14, 0.060, 0.12), Vector3.new(0.000, 0.960, 0.30), C.Black }, -- base da alça
 		{ Vector3.new(0.08, 0.9, 0.08), Vector3.new(0.16, 0.2, -2.2), C.Black, Vector3.new(25, 0, 15) }, -- bipé
 		{ Vector3.new(0.08, 0.9, 0.08), Vector3.new(-0.16, 0.2, -2.2), C.Black, Vector3.new(25, 0, -15) },
 		{ Vector3.new(0.38, 0.5, 0.6), Vector3.new(0, 0.05, -0.55), C.OliveDark, nil, nil, "Mag" }, -- caixa de munição
@@ -262,7 +273,8 @@ do
 		{ Vector3.new(0.29, 0.1, 0.06), Vector3.new(0, 0.5, 0.04), C.Dark, nil, nil, "Slide" },
 		{ Vector3.new(0.26, 0.18, 0.9), Vector3.new(0, 0.3, -0.25), C.Dark }, -- armação
 		{ Vector3.new(0.12, 0.12, 0.06), Vector3.new(0, 0.48, -0.77), C.Black }, -- boca
-		{ Vector3.new(0.16, 0.08, 0.06), Vector3.new(0, 0.68, 0.2), C.Black, nil, nil, "Slide" }, -- alça
+		{ Vector3.new(0.05, 0.1, 0.06), Vector3.new(-0.055, 0.69, 0.2), C.Black, nil, nil, "Slide" }, -- alça em U
+		{ Vector3.new(0.05, 0.1, 0.06), Vector3.new(0.055, 0.69, 0.2), C.Black, nil, nil, "Slide" },
 		{ Vector3.new(0.05, 0.08, 0.05), Vector3.new(0, 0.68, -0.68), C.Black, nil, nil, "Slide" }, -- massa
 		{ Vector3.new(0.06, 0.06, 0.3), Vector3.new(0, 0.14, -0.2), C.Black }, -- guarda-mato
 		{ Vector3.new(0.05, 0.12, 0.05), Vector3.new(0, 0.2, -0.12), C.Black },

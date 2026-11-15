@@ -95,6 +95,10 @@ end
 	color: cor do fragmento; size: lado em studs.
 ]]
 function DestructionEffects.spawnFragment(position: Vector3, color: Color3, material: Enum.Material, size: number, velocity: Vector3)
+	-- nunca criar fragmento colado na câmera (aparecia flutuando na tela)
+	if (position - workspace.CurrentCamera.CFrame.Position).Magnitude < 4 then
+		return
+	end
 	if #active >= cfg.MaxActive then
 		return
 	end

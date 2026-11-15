@@ -9,20 +9,21 @@
 local PropKit = {}
 
 local COLORS = {
-	Grass = Color3.fromRGB(104, 176, 92),
-	GrassDark = Color3.fromRGB(86, 152, 78),
-	Dirt = Color3.fromRGB(176, 140, 96),
-	Asphalt = Color3.fromRGB(64, 68, 78),
-	Line = Color3.fromRGB(246, 214, 80),
-	Sidewalk = Color3.fromRGB(196, 196, 204),
-	Trunk = Color3.fromRGB(120, 78, 48),
-	Leaves = Color3.fromRGB(76, 156, 72),
-	LeavesLight = Color3.fromRGB(110, 186, 84),
-	Rock = Color3.fromRGB(130, 134, 142),
-	RockDark = Color3.fromRGB(104, 108, 118),
-	Metal = Color3.fromRGB(70, 74, 84),
-	Lamp = Color3.fromRGB(255, 236, 170),
-	BaseFloor = Color3.fromRGB(150, 156, 168),
+	Grass = Color3.fromRGB(92, 110, 68),
+	GrassDark = Color3.fromRGB(78, 94, 60),
+	Dirt = Color3.fromRGB(116, 96, 74),
+	Asphalt = Color3.fromRGB(52, 54, 58),
+	Line = Color3.fromRGB(196, 178, 104),
+	Sidewalk = Color3.fromRGB(138, 136, 130),
+	Trunk = Color3.fromRGB(86, 66, 50),
+	Leaves = Color3.fromRGB(70, 92, 54),
+	LeavesLight = Color3.fromRGB(92, 112, 64),
+	Rock = Color3.fromRGB(112, 112, 108),
+	RockDark = Color3.fromRGB(88, 88, 86),
+	Metal = Color3.fromRGB(62, 66, 72),
+	Lamp = Color3.fromRGB(255, 226, 170),
+	BaseFloor = Color3.fromRGB(116, 118, 114),
+	Pavement = Color3.fromRGB(104, 104, 100),
 }
 PropKit.Colors = COLORS
 
