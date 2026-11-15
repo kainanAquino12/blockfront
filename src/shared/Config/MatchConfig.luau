@@ -30,9 +30,9 @@ MatchConfig.ScorePerSecondHeld = 1
 
 -- Pontos de captura (mapa "Front Bloco"). FlagOffset: posição do mastro em relação ao centro.
 MatchConfig.CapturePoints = {
-	{ Id = "A", Name = "Indústria", Position = Vector3.new(-200, 0, 0), Radius = 16, FlagOffset = Vector3.new(8, 0, 8) },
-	{ Id = "B", Name = "Praça", Position = Vector3.new(0, 0, 0), Radius = 18, FlagOffset = Vector3.new(0, 0, 0) },
-	{ Id = "C", Name = "Fazenda", Position = Vector3.new(215, 0, 0), Radius = 16, FlagOffset = Vector3.new(-8, 0, 8) },
+	{ Id = "A", Name = "Indústria", Position = Vector3.new(-240, 0, 0), Radius = 18, FlagOffset = Vector3.new(8, 0, 8) },
+	{ Id = "B", Name = "Praça", Position = Vector3.new(-20, 2, 0), Radius = 20, FlagOffset = Vector3.new(0, 0, 0) },
+	{ Id = "C", Name = "QG do Cume", Position = Vector3.new(234, 26, 0), Radius = 18, FlagOffset = Vector3.new(-8, 0, 8) },
 }
 
 MatchConfig.CaptureRules = {

@@ -30,7 +30,7 @@ local BuildingKit = require(script.Parent.Parent.BuildingKit)
 local EdificioCentral = {}
 
 local W, D = 42, 30 -- planta (x, z)
-local FLOORS = 6
+local FLOORS = 6 -- padrão; build({ Floors = n }) muda
 local FH = 9 -- piso a piso
 local COLS_X = { 0, 10, 20, 30, 40 }
 local COLS_Z = { 0, 14, 28 }
@@ -52,7 +52,8 @@ local function isColX(x: number): boolean
 	return false
 end
 
-function EdificioCentral.build()
+function EdificioCentral.build(opts: { Floors: number? }?)
+	FLOORS = (opts and opts.Floors) or 6
 	local b = BuildingKit.new(W + MARGIN * 2, L(FLOORS) + 14, D + MARGIN * 2, Vector3.new(MARGIN, 0, MARGIN))
 
 	-------------------------------------------------------------------------
@@ -207,7 +208,7 @@ function EdificioCentral.build()
 			for _, side in { { z0 = 0, z1 = 1, zg = 1, zf = 0, n = "S" }, { z0 = 28, z1 = 29, zg = 28, zf = 29, n = "N" } } do
 				for _, bay in baysX do
 					local a, c, i = bay[1], bay[2], bay[3]
-					local balcony = side.n == "N" and f <= 4 and (i == 1 or i == 4)
+					local balcony = side.n == "N" and f <= FLOORS - 2 and (i == 1 or i == 4)
 					if not balcony then
 						b:add("Wall", "FacadePanel", a, y0, side.z0, c, y0 + 2, side.z1, ("Peitoril_%s_%s_%d"):format(side.n, tag, i))
 					end
@@ -265,7 +266,7 @@ function EdificioCentral.build()
 			b:add("Prop", "Stone", 10, y0, 11, 10, y0 + 2, 12, "Recepcao_Lado")
 			b:add("Prop", "Wood", 33, y0, 6, 37, y0, 7, "Banco_1")
 			b:add("Prop", "Wood", 33, y0, 22, 37, y0, 23, "Banco_2")
-		elseif f <= 4 then
+		elseif f <= FLOORS - 2 then
 			-- metade oeste: salas fechadas (sul e norte) com corredor no meio
 			for _, zw in { 7, 22 } do
 				local id = b:add("Partition", "Gypsum", 2, y0, zw, 21, yc, zw, ("Divisoria_%s_%d"):format(tag, zw))

@@ -43,7 +43,7 @@ GameConfig.CollisionGroups = {
 -- Área de demonstração do padrão V4 (prédio Edifício Central), fora do
 -- mapa de combate. Só para avaliar arquitetura e colapso estrutural.
 GameConfig.DemoArea = {
-	Enabled = true,
+	Enabled = false, -- V5: o prédio vai para o mapa; ligue para testar isolado
 	Origin = Vector3.new(420, 0, -60), -- canto sudoeste do prédio
 	SpawnOffset = Vector3.new(21, 3, -40), -- onde o jogador aparece (de frente para a fachada sul)
 }

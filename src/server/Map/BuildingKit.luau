@@ -104,4 +104,95 @@ function BuildingKit:finish()
 	}
 end
 
+--[[
+	Espelha uma definição de estrutura em z (o que era a face sul vira a
+	face norte). Funciona com qualquer def { Size, Fill, Elements?, ElementOf? }:
+	usado pelo MapManager no lado vermelho e para virar prédios de frente.
+]]
+function BuildingKit.flipZ(def)
+	local size = def.Size
+	local sx, sy, sz = size.X, size.Y, size.Z
+	local f = def.Fill
+	local out = {
+		Size = size,
+		Fill = function(x: number, y: number, z: number): number
+			return f(x, y, sz - 1 - z)
+		end,
+		Elements = def.Elements,
+		ElementOf = nil,
+		Offset = def.Offset,
+	}
+	if def.ElementOf then
+		local sxy = sx * sy
+		local src = def.ElementOf
+		local dst = buffer.create(buffer.len(src))
+		for c = 0, sz - 1 do
+			buffer.copy(dst, (sz - 1 - c) * sxy * 2, src, c * sxy * 2, sxy * 2)
+		end
+		out.ElementOf = dst
+	end
+	return out
+end
+
+--[[
+	Núcleo de escada (paredes portantes + escada em U por andar), 8 x 14 em
+	planta, canto em (x0, z0). Mesmo desenho usado no Edifício Central:
+	  porta na parede oeste (x0), z0+1..z0+3, abrindo no patamar
+	  lance A sobe para o norte (x0+1..x0+3), patamar ao fundo,
+	  lance B volta para o sul (x0+4..x0+6) até a laje de cima
+	  poço aberto nas lajes em z0+5..z0+12
+	levels: alturas das lajes { y0 (fundação), y1, ..., yN }
+	opts.Penthouse: altura da casa de escada acima da última laje
+	opts.Name: prefixo dos nomes dos elementos
+]]
+function BuildingKit:stairCore(x0: number, z0: number, levels: { number }, opts: { Penthouse: number?, Name: string? }?)
+	local RC = "ReinforcedConcrete"
+	local name = (opts and opts.Name) or "Nucleo"
+	local ph = opts and opts.Penthouse
+	local x1, z1 = x0 + 7, z0 + 13
+	local n = #levels - 1 -- andares
+	for f = 0, n do
+		local y0 = if f == 0 then levels[1] + 1 else levels[f + 1]
+		local y1
+		if f == n then
+			if not ph then
+				break
+			end
+			y1 = levels[f + 1] + ph
+		else
+			y1 = levels[f + 2] - 1
+		end
+		local tag = ("%s_A%d"):format(name, f)
+		self:add("BearingWall", RC, x0, y0, z0, x0, y1, z1, tag .. "_O")
+		self:add("BearingWall", RC, x1, y0, z0, x1, y1, z1, tag .. "_L")
+		self:add("BearingWall", RC, x0, y0, z0, x1, y1, z0, tag .. "_S")
+		self:add("BearingWall", RC, x0, y0, z1, x1, y1, z1, tag .. "_N")
+		local fy = levels[f + 1] + 1
+		self:carve(x0, fy, z0 + 1, x0, fy + 6, z0 + 3)
+	end
+	if ph then
+		local yt = levels[n + 1] + ph + 1
+		self:add("Roof", RC, x0, yt, z0, x1, yt, z1, name .. "_Teto")
+	end
+	-- poço nas lajes (mantém a faixa de patamar z0+1..z0+4)
+	for k = 2, n + 1 do
+		self:carve(x0 + 1, levels[k] - 1, z0 + 5, x1 - 1, levels[k], z1 - 1)
+	end
+	-- escadas
+	for f = 0, n - 1 do
+		local y0 = levels[f + 1] + 1
+		local rise = levels[f + 2] - levels[f + 1]
+		local half = math.floor(rise / 2)
+		local sid = self:add("Stair", RC, x0 + 1, y0, z0 + 4, x0 + 3, y0, z0 + 4, ("%s_Escada_A%d"):format(name, f))
+		for i = 0, half do
+			self:extend(sid, x0 + 1, math.max(y0 + i - 1, y0), z0 + 4 + i, x0 + 3, y0 + i, z0 + 4 + i)
+		end
+		self:extend(sid, x0 + 1, y0 + half - 1, z0 + 5 + half, x1 - 1, y0 + half, z1 - 1)
+		for i = 0, rise - half - 2 do
+			local z = z0 + 4 + half - i
+			self:extend(sid, x0 + 4, y0 + half + i, z, x0 + 6, y0 + half + 1 + i, z)
+		end
+	end
+end
+
 return BuildingKit

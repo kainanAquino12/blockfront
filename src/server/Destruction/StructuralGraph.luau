@@ -176,7 +176,7 @@ function StructuralGraph.new(grid, defs: { ElementDef }, elementOf: buffer)
 				elseif not A.Structural and B.Structural then
 					w = 1 -- vedação/acabamento presa na lateral de um estrutural
 				elseif k.side and (A.Type == "Beam" or A.Type == "Slab")
-					and (B.Type == "Column" or B.Type == "BearingWall" or B.Type == "Beam") then
+					and (B.Type == "Column" or B.Type == "BearingWall" or B.Type == "Beam" or B.Type == "Foundation") then
 					w = 1
 				elseif k.side and (A.Type == "Column" or A.Type == "BearingWall") and B.Type == "Beam" then
 					w = 0.05

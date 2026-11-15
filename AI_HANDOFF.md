@@ -242,3 +242,12 @@ Leia, entenda e teste antes e depois de mexer:
 - Parâmetros de colapso e limites de performance: `shared/Config/StructuralConfig.luau`.
 - Testes no Studio (Server): `game.ServerStorage.DevStructure:Invoke("teleport" | "breakName", nome | "elements", padrão | "stats")`.
 - Atenção: o primeiro jogador escolher time reinicia a rodada e reconstrói o mapa (a destruição volta ao zero).
+
+
+## Atualização V5 (2026-11-15)
+
+- Mapa novo: `TerrainGen` (relevo, use `TerrainGen.height(x, z)` para pôr coisas no chão) + `MapLayout` (V5).
+- Construções novas sempre por `BuildingKit` (com `stairCore` para escadas) em `server/Map/Buildings/`.
+- O lado vermelho é espelho do azul (`BuildingKit.flipZ`); o que fica sobre z = 0 vai em `MapLayout.buildCenter`.
+- Teste de colapso: `ServerStorage.DevStructure:Invoke("break", "Center_EdificioAdministrativo", "Pilar_1_5_A0", 1)`
+  e `Invoke("stats", "<nome da estrutura>")`.

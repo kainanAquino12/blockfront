@@ -77,3 +77,20 @@ Arquivos novos: `shared/Config/StructuralConfig.luau`, `server/Destruction/Struc
 `server/Destruction/CollapseBodies.luau`, `server/Map/BuildingKit.luau`, `server/Map/Buildings/EdificioCentral.luau`.
 Arquivos modificados: `ViewmodelController`, `WeaponConfig` (poses), `MaterialConfig`, `GameConfig` (DemoArea),
 `DestructionManager`, `MapManager`, `DevToolsManager`.
+
+
+## 2026-11-15 — V5: Open World Battlefield
+
+Plano e resultados: `docs/MAPA_V5.md`. Prints: `docs/prints_v5/`.
+
+- Mapa refeito: 640 x 880, Terrain com relevo (`TerrainGen`), sem árvores cúbicas, carros ou casinhas.
+- 5 construções monumentais por elementos estruturais: 2 Torres Comerciais (10 andares), Edifício Administrativo,
+  Complexo Industrial, QG Militar; pontes destrutíveis sobre a vala.
+- Pontos A/B/C movidos para (-240, 0), (-20, 0), (234, 0) com a altura do chão; spawns no platô +12.
+- `BuildingKit.flipZ` (espelhamento único usado pelo MapManager) e `BuildingKit:stairCore` (núcleo de escada reutilizável).
+- `StructuralGraph`: viga/laje também se apoiam lateralmente em fundação (pontes).
+- Área de demonstração isolada desligada (`GameConfig.DemoArea.Enabled = false`).
+
+Arquivos novos: `server/Map/TerrainGen.luau`, `server/Map/Buildings/{EdificioAdministrativo,ComplexoIndustrial,QGMilitar,Ponte}.luau`.
+Reescritos: `server/Map/MapLayout.luau`. Modificados: `MapManager` (buildGround, ctx.struct com elementos), `BuildingKit`,
+`EdificioCentral` (andares por parâmetro), `StructuralGraph`, `MatchConfig` (pontos), `GameConfig`, `DevToolsManager`.

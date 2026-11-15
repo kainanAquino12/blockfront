@@ -27,6 +27,8 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local GameConfig = require(ReplicatedStorage.Shared.Config.GameConfig)
 local DestructionManager = require(script.Parent.DestructionManager)
 local EdificioCentral = require(script.Parent.Parent.Map.Buildings.EdificioCentral)
+local TerrainGen = require(script.Parent.Parent.Map.TerrainGen)
+local BuildingKit = require(script.Parent.Parent.Map.BuildingKit)
 local MapFolder = script.Parent.Parent.Map
 local MapLayout = require(MapFolder.MapLayout)
 local PropKit = require(MapFolder.PropKit)
@@ -85,23 +87,21 @@ local function makeContext(mode: string, static: Instance, destructibles: Instan
 			x += def.Offset.X
 			z += def.Offset.Z
 		end
-		local origin, fill
+		local origin
 		if mirrored then
-			local sz = def.Size.Z
-			origin = CFrame.new(x, y or 0, -(z + sz))
-			local f = def.Fill
-			fill = function(a: number, b: number, c: number): number
-				return f(a, b, sz - 1 - c)
-			end
+			origin = CFrame.new(x, y or 0, -(z + def.Size.Z))
+			def = BuildingKit.flipZ(def) -- Fill e ElementOf espelhados em z
 		else
 			origin = CFrame.new(x, y or 0, z)
-			fill = def.Fill
 		end
+		local fill, elementOf = def.Fill, def.ElementOf
 		DestructionManager.createStructure({
 			Name = mode .. "_" .. name,
 			Origin = origin,
 			Size = def.Size,
 			Fill = fill,
+			Elements = def.Elements,
+			ElementOf = elementOf,
 			Parent = destructibles,
 		})
 	end
@@ -188,57 +188,10 @@ local function applyEnvironment()
 end
 
 local function buildGround(map: Instance)
-	local hx, hz = MapLayout.HalfX, MapLayout.HalfZ
-	local river = MapLayout.River
-	local C = PropKit.Colors
-	local depth = 10
-	local w0, w1 = -(hx + 40), river.X0
-	local e0, e1 = river.X1, hx + 40
-	PropKit.block(map, CFrame.new((w0 + w1) / 2, -depth / 2, 0), Vector3.new(w1 - w0, depth, (hz + 40) * 2), C.Grass, Enum.Material.Grass).Name = "Ground"
-	PropKit.block(map, CFrame.new((e0 + e1) / 2, -depth / 2, 0), Vector3.new(e1 - e0, depth, (hz + 40) * 2), C.Grass, Enum.Material.Grass).Name = "Ground"
-	PropKit.block(map, CFrame.new((river.X0 + river.X1) / 2, -river.Depth - 1, 0), Vector3.new(river.X1 - river.X0, 2, (hz + 40) * 2), C.Dirt, Enum.Material.Mud).Name = "Riverbed"
-	workspace.Terrain:FillBlock(
-		CFrame.new((river.X0 + river.X1) / 2, -river.Depth / 2 - 0.5, 0),
-		Vector3.new(river.X1 - river.X0, river.Depth - 1, (hz + 40) * 2),
-		Enum.Material.Water
-	)
-
-	-- Manchas de grama e terra para quebrar a uniformidade
-	local rng = Random.new(42)
-	for _ = 1, 70 do
-		local x = rng:NextNumber(-hx, hx)
-		if x < river.X0 - 12 or x > river.X1 + 12 then
-			local w, d = rng:NextNumber(16, 50), rng:NextNumber(16, 50)
-			PropKit.block(map, CFrame.new(x, 0.02, rng:NextNumber(-hz, hz)), Vector3.new(w, 0.05, d), if rng:NextNumber() < 0.75 then C.GrassDark else C.Dirt, Enum.Material.Grass, true)
-		end
-	end
-
-	-- Piso urbano (calçamento cinza) na cidade e no pátio militar de cada base:
-	-- tira o "gramado infinito" e deixa a grama só nos parques e no campo.
-	PropKit.block(map, CFrame.new(0, 0.03, 0), Vector3.new(232, 0.06, 600), C.Pavement, Enum.Material.Pavement, true).Name = "UrbanGround"
-
-	-- Ruas
-	PropKit.road(map, Vector3.new(0, 0, 0), 600, 18, true) -- avenida central N-S
-	PropKit.road(map, Vector3.new(-82, 0, 0), 436, 14, false) -- boulevard até a ponte central
-	for _, z in { -160, -80, 80, 160 } do
-		PropKit.road(map, Vector3.new(0, 0, z), 224, 12, false)
-	end
-	for _, z in { -80, 80 } do
-		PropKit.road(map, Vector3.new(-205, 0, z), 190, 12, false) -- acesso industrial
-	end
-	for _, x in { -60, 60 } do
-		PropKit.road(map, Vector3.new(x, 0, 0), 400, 10, true)
-	end
-	-- estradas de terra no campo
-	PropKit.block(map, CFrame.new(232, 0.05, 0), Vector3.new(136, 0.1, 10), C.Dirt, Enum.Material.Ground, true)
-	for _, z in { -151, 151 } do
-		PropKit.block(map, CFrame.new(123, 0.05, z), Vector3.new(30, 0.1, 10), C.Dirt, Enum.Material.Ground, true)
-		PropKit.block(map, CFrame.new(220, 0.05, z), Vector3.new(120, 0.1, 10), C.Dirt, Enum.Material.Ground, true)
-	end
-	-- pátio industrial de concreto
-	PropKit.block(map, CFrame.new(-205, 0.06, 0), Vector3.new(150, 0.12, 60), Color3.fromRGB(150, 150, 156), Enum.Material.Concrete, true)
-
-	PropKit.boundary(map, hx, hz)
+	-- Relevo V5 (Terrain do Roblox): colinas, vala, cume leste, platôs e estradas.
+	local seconds = TerrainGen.build()
+	print(("[BLOCKFRONT] Terreno gerado em %.2f s"):format(seconds))
+	PropKit.boundary(map, MapLayout.HalfX, MapLayout.HalfZ)
 end
 
 -- Chão da área de demonstração (estático).

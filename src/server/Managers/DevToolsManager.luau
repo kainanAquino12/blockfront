@@ -17,6 +17,7 @@ local GameConfig = require(ReplicatedStorage.Shared.Config.GameConfig)
 local DestructionConfig = require(ReplicatedStorage.Shared.Config.DestructionConfig)
 local Remotes = require(ReplicatedStorage.Shared.Modules.Remotes)
 local DestructionManager = require(script.Parent.DestructionManager)
+local TerrainGen = require(script.Parent.Parent.Map.TerrainGen)
 
 local DevToolsManager = {}
 
@@ -109,7 +110,8 @@ local function spawnDummies()
 	folder.Name = "TrainingDummies"
 	folder.Parent = workspace
 	for _, pos in DUMMY_SPOTS do
-		buildDummy(folder, pos)
+		-- em cima do relevo
+		buildDummy(folder, Vector3.new(pos.X, TerrainGen.height(pos.X, pos.Z), pos.Z))
 	end
 end
 
@@ -154,7 +156,7 @@ local function devStructure(cmd: string, a: any, b: any, c: any): any
 		end
 		return table.concat(out, "\n")
 	elseif cmd == "stats" then
-		local s = DestructionManager.findStructure(DEMO)
+		local s = DestructionManager.findStructure(if type(a) == "string" then a else DEMO)
 		local out = {
 			Destruction = DestructionManager.getStats(),
 			Collapse = DestructionManager.getCollapseStats(),

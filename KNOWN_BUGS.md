@@ -34,6 +34,13 @@ Lista só o que foi observado ou pode ser verificado no código. Nada aqui foi i
 13. **Armas na mão (terceira pessoa)** continuam grandes demais para o personagem (rifle de ~4,6 studs); só o viewmodel foi corrigido.
 14. **Destroços não causam dano em jogadores** (esmagamento não implementado).
 
+## V5 (mapa aberto)
+
+15. **Multijogador do mapa novo não testado** (só Play Solo). Terreno leva ~2,8 s para gerar no servidor ao iniciar.
+16. **Escadas e interiores dos prédios novos não foram percorridos** com o personagem.
+17. **Colapso do QG Militar e das pontes** não testado individualmente.
+18. **Rodada nova reconstrói todas as estruturas** (inclusive as 5 grandes); medido 0,5 s no Edit, não medido em servidor cheio.
+
 ## Riscos e limitações (não testados)
 
 - **Multijogador nunca testado** com 2 ou mais jogadores reais: abate, feed, balanceamento, replicação de tiros e fragmentos.
