@@ -117,10 +117,67 @@ function DevToolsManager.isEnabled(): boolean
 	return GameConfig.DevTools.Enabled and RunService:IsStudio()
 end
 
+--[[
+	Comandos de teste do colapso estrutural, chamados pelo command bar do
+	Studio (mesma instância dos módulos do jogo):
+	  game.ServerStorage.DevStructure:Invoke("teleport")
+	  game.ServerStorage.DevStructure:Invoke("break", "Pilar_22_A0", 1)
+	  game.ServerStorage.DevStructure:Invoke("explode", Vector3, raio, dano)
+	  game.ServerStorage.DevStructure:Invoke("stats")
+]]
+local DEMO = "Demo_EdificioCentral"
+local function devStructure(cmd: string, a: any, b: any, c: any): any
+	if cmd == "teleport" then
+		local demo = GameConfig.DemoArea
+		for _, p in Players:GetPlayers() do
+			local root = p.Character and p.Character:FindFirstChild("HumanoidRootPart") :: BasePart?
+			if root then
+				root.CFrame = CFrame.lookAt(demo.Origin + demo.SpawnOffset, demo.Origin + Vector3.new(21, 12, 15))
+			end
+		end
+		return true
+	elseif cmd == "break" then
+		return DestructionManager.destroyElement(a or DEMO, b, c)
+	elseif cmd == "breakName" then
+		return DestructionManager.destroyElement(DEMO, a, b)
+	elseif cmd == "explode" then
+		return DestructionManager.explode(a, b or 6, c or 260)
+	elseif cmd == "elements" then
+		-- elementos cujo nome contém o padrão : estado, nível, carga, capacidade
+		local s = DestructionManager.findStructure(DEMO)
+		local out = {}
+		for _, e in s.Graph.Elements do
+			if string.find(e.Name, a, 1, true) then
+				table.insert(out, string.format("%s broken=%s lvl=%s load=%.0f cap=%.0f alive=%d/%d unst=%s",
+					e.Name, tostring(e.Broken), tostring(e.Level), e.Load, e.Capacity, e.Alive, e.Total, tostring(e.UnstableAt ~= nil)))
+			end
+		end
+		return table.concat(out, "\n")
+	elseif cmd == "stats" then
+		local s = DestructionManager.findStructure(DEMO)
+		local out = {
+			Destruction = DestructionManager.getStats(),
+			Collapse = DestructionManager.getCollapseStats(),
+		}
+		if s and s.Graph then
+			out.Graph = s.Graph:summary()
+			out.Parts = s:CountParts()
+			out.Cells = s.Grid.alive
+			out.DesignWarnings = s.Graph.DesignWarnings
+		end
+		return out
+	end
+	return nil
+end
+
 function DevToolsManager.init()
 	if not DevToolsManager.isEnabled() then
 		return
 	end
+	local bf = Instance.new("BindableFunction")
+	bf.Name = "DevStructure"
+	bf.OnInvoke = devStructure
+	bf.Parent = game:GetService("ServerStorage")
 	Remotes.get("DevExplosionRequest").OnServerEvent:Connect(onRequest)
 	spawnDummies()
 	Players.PlayerRemoving:Connect(function(p)

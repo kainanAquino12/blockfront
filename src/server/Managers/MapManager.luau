@@ -26,6 +26,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local GameConfig = require(ReplicatedStorage.Shared.Config.GameConfig)
 local DestructionManager = require(script.Parent.DestructionManager)
+local EdificioCentral = require(script.Parent.Parent.Map.Buildings.EdificioCentral)
 local MapFolder = script.Parent.Parent.Map
 local MapLayout = require(MapFolder.MapLayout)
 local PropKit = require(MapFolder.PropKit)
@@ -240,12 +241,49 @@ local function buildGround(map: Instance)
 	PropKit.boundary(map, hx, hz)
 end
 
+-- Chão da área de demonstração (estático).
+local function buildDemoGround(map: Instance)
+	local demo = GameConfig.DemoArea
+	if not demo or not demo.Enabled then
+		return
+	end
+	local o = demo.Origin
+	local fp = EdificioCentral.Footprint
+	local center = o + Vector3.new(fp.X / 2, 0, fp.Y / 2)
+	local ground = PropKit.block(map, CFrame.new(center.X, -0.5, center.Z - 20), Vector3.new(160, 1, 160), Color3.fromRGB(96, 98, 98), Enum.Material.Concrete, false)
+	ground.Name = "DemoGround"
+	local road = PropKit.block(map, CFrame.new(center.X, 0.03, o.Z - 18), Vector3.new(160, 0.06, 20), Color3.fromRGB(52, 54, 58), Enum.Material.Asphalt, true)
+	road.Name = "DemoRoad"
+end
+
+-- Prédio de demonstração (estrutura com grafo estrutural).
+local function buildDemoBuilding(destructibles: Instance)
+	local demo = GameConfig.DemoArea
+	if not demo or not demo.Enabled then
+		return
+	end
+	local def = EdificioCentral.build()
+	local m = EdificioCentral.Margin
+	local s = DestructionManager.createStructure({
+		Name = "Demo_EdificioCentral",
+		Origin = CFrame.new(demo.Origin - Vector3.new(m, 0, m)),
+		Size = def.Size,
+		Fill = def.Fill,
+		Elements = def.Elements,
+		ElementOf = def.ElementOf,
+		Parent = destructibles,
+	})
+	return s
+end
+MapManager.buildDemoBuilding = buildDemoBuilding
+
 function MapManager.buildStatic()
 	local map = folder("Map")
 	local spawns = folder("SpawnPoints")
 	local scratch = Instance.new("Folder") -- estruturas não são criadas aqui
 
 	buildGround(map)
+	buildDemoGround(map)
 
 	for _, mode in { "Blue", "Red" } do
 		local ctx = makeContext(mode, map, scratch)
@@ -280,6 +318,8 @@ function MapManager.buildDestructibles()
 		task.wait()
 	end
 	MapLayout.buildCenter(makeContext("Center", props, destructibles))
+	task.wait()
+	buildDemoBuilding(destructibles)
 	if propsBuilt then
 		props:Destroy()
 	end

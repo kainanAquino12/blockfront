@@ -169,6 +169,35 @@ local list: { MaterialDef } = {
 		Material = Enum.Material.Metal,
 		Color = Color3.fromRGB(62, 66, 72),
 	},
+	{
+		Id = 22,
+		Name = "ReinforcedConcrete", -- pilares, vigas e lajes (estrutura)
+		MaxHealth = 170,
+		Material = Enum.Material.Concrete,
+		Color = Color3.fromRGB(122, 122, 118),
+	},
+	{
+		Id = 23,
+		Name = "Gypsum", -- divisórias internas (frágeis)
+		MaxHealth = 22,
+		Material = Enum.Material.Plaster,
+		Color = Color3.fromRGB(176, 174, 166),
+	},
+	{
+		Id = 24,
+		Name = "TintedGlass", -- pano de vidro da fachada
+		MaxHealth = 5,
+		Material = Enum.Material.Glass,
+		Color = Color3.fromRGB(70, 92, 102),
+		Transparency = 0.35,
+	},
+	{
+		Id = 25,
+		Name = "FacadePanel", -- painéis e peitoris da fachada
+		MaxHealth = 110,
+		Material = Enum.Material.Concrete,
+		Color = Color3.fromRGB(146, 142, 132),
+	},
 }
 
 MaterialConfig.ById = {} :: { [number]: MaterialDef }
