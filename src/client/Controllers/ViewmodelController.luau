@@ -1,8 +1,17 @@
 --[[
 	ViewmodelController (cliente) — arma e braços em primeira pessoa.
 	Só o jogador local vê. Usa o mesmo modelo em blocos da Tool
-	(WeaponModels), em escala menor, preso à câmera, com antebraços na cor
-	do time segurando a arma.
+	(WeaponModels), em escala menor, preso à câmera.
+
+	Braços (rig com IK de 2 ossos, V4):
+	  ombro -> braço -> cotovelo -> antebraço -> mão
+	  - os ombros ficam fixos no espaço da câmera, fora da tela (embaixo e
+	    para os lados); as mãos vão para a empunhadura (Handle) e para o
+	    Attachment "LeftHand" da arma; o cotovelo é calculado (IK analítico)
+	    e aponta para baixo/para fora.
+	  - todas as medidas do braço ficam em ARM (uma escala só, a do
+	    viewmodel), não por arma.
+	  - manga em cor de uniforme neutra; braçadeira fina na cor do time.
 
 	Poses (todas misturadas suavemente):
 	  Hip     WeaponConfig.Viewmodel.Hip
@@ -38,13 +47,26 @@ local player = Players.LocalPlayer
 
 local ViewmodelController = {}
 
-local GLOVE = Color3.fromRGB(46, 48, 56)
--- Antebraço: sai da mão em direção ao cotovelo (fora da tela, embaixo), no
--- espaço da câmera. Comprimento e espessura fixos em studs, proporcionais à arma.
-local FOREARM_DIR_R = Vector3.new(0.22, -0.62, 0.75).Unit
-local FOREARM_DIR_L = Vector3.new(-0.32, -0.58, 0.75).Unit
-local FOREARM_LEN = 0.62
-local ARM_WIDTH = 0.12
+local GLOVE = Color3.fromRGB(38, 40, 42)
+local UNIFORM = Color3.fromRGB(72, 76, 64) -- manga (uniforme), igual para os dois times
+local UNIFORM_DARK = Color3.fromRGB(60, 63, 54)
+
+-- Medidas do braço no espaço do viewmodel (studs, relativas à câmera).
+-- Ombros fora do campo de visão; comprimentos chegam à empunhadura de todas
+-- as armas com folga (se não chegar, o braço estica um pouco em vez de soltar
+-- a mão da arma).
+local ARM = {
+	ShoulderR = Vector3.new(0.6, -0.8, -0.3),
+	ShoulderL = Vector3.new(-0.22, -0.82, -0.5),
+	PoleR = Vector3.new(0.6, -1, 0.2), -- direção para onde o cotovelo aponta
+	PoleL = Vector3.new(-0.35, -1, 0.2),
+	Upper = 0.62,
+	Fore = 0.85,
+	UpperWidth = 0.14,
+	ForeWidth = 0.115,
+	HandSize = Vector3.new(0.105, 0.125, 0.16),
+	BandWidth = 0.158,
+}
 local SPRINT_POSE = CFrame.new(0.06, -0.14, 0.05) * CFrame.Angles(math.rad(-18), math.rad(38), math.rad(16))
 
 local folder: Model
@@ -102,10 +124,10 @@ local function teamColor(): Color3
 end
 
 local function setArmsVisible(right: boolean, left: boolean)
-	arms.SleeveR.Transparency = if right then 0 else 1
-	arms.HandR.Transparency = if right then 0 else 1
-	arms.SleeveL.Transparency = if left then 0 else 1
-	arms.HandL.Transparency = if left then 0 else 1
+	for name, part in arms do
+		local isLeft = string.sub(name, -1) == "L"
+		part.Transparency = if (isLeft and left) or (not isLeft and right) then 0 else 1
+	end
 end
 
 local function setHidden(value: boolean)
@@ -171,10 +193,10 @@ function ViewmodelController.setWeapon(id: string?)
 	end
 	AimController.setWeapon(aimPose ~= nil, vm.AimFov, vm.AimSensitivity, vm.Scope)
 
-	-- manga: cor do time escurecida (uniforme), não a cor pura do time
-	local color = teamColor():Lerp(Color3.fromRGB(40, 44, 40), 0.45)
-	arms.SleeveR.Color = color
-	arms.SleeveL.Color = color
+	-- braçadeira: única peça na cor do time (dessaturada)
+	local band = teamColor():Lerp(UNIFORM, 0.35)
+	arms.BandR.Color = band
+	arms.BandL.Color = band
 	setArmsVisible(true, h:FindFirstChild("LeftHand") ~= nil)
 
 	equipAlpha = 0
@@ -219,12 +241,54 @@ function ViewmodelController.getMuzzlePosition(): Vector3?
 	return muzzle and muzzle.WorldPosition
 end
 
-local function placeArm(sleeve: BasePart, hand: BasePart, camCF: CFrame, dir: Vector3, handCF: CFrame)
-	local handPos = handCF.Position
-	local elbow = handPos + camCF:VectorToWorldSpace(dir) * FOREARM_LEN
-	sleeve.Size = Vector3.new(ARM_WIDTH, ARM_WIDTH, FOREARM_LEN)
-	sleeve.CFrame = CFrame.lookAt((elbow + handPos) / 2, handPos)
-	hand.CFrame = handCF
+-- Segmento (Part) do ponto a ao ponto b, com a espessura dada.
+local function segment(part: BasePart, a: Vector3, b: Vector3, width: number, up: Vector3)
+	local len = (b - a).Magnitude
+	part.Size = Vector3.new(width, width, math.max(len, 0.01))
+	part.CFrame = CFrame.lookAt((a + b) / 2, b, up)
+end
+
+--[[
+	IK analítico de 2 ossos. shoulder/hand/pole em coordenadas do mundo.
+	Retorna o cotovelo. Se a mão estiver longe demais, os ossos esticam na
+	mesma proporção (a mão nunca solta a arma).
+]]
+local function solveElbow(shoulder: Vector3, hand: Vector3, pole: Vector3, a: number, b: number): Vector3
+	local toHand = hand - shoulder
+	local d = toHand.Magnitude
+	if d < 1e-4 then
+		return shoulder + pole.Unit * a
+	end
+	local dir = toHand / d
+	local reach = a + b
+	if d >= reach * 0.999 then
+		local k = d / reach
+		return shoulder + dir * a * k
+	end
+	d = math.max(d, math.abs(a - b) + 1e-3)
+	local cosA = math.clamp((a * a + d * d - b * b) / (2 * a * d), -1, 1)
+	local sinA = math.sqrt(1 - cosA * cosA)
+	local perp = pole - dir * pole:Dot(dir)
+	if perp.Magnitude < 1e-4 then
+		perp = dir:Cross(Vector3.yAxis)
+	end
+	return shoulder + dir * (a * cosA) + perp.Unit * (a * sinA)
+end
+
+local function placeArm(side: string, camCF: CFrame, handCF: CFrame)
+	local shoulder = camCF:PointToWorldSpace(ARM["Shoulder" .. side])
+	local pole = camCF:VectorToWorldSpace(ARM["Pole" .. side])
+	-- a mão segura por trás da empunhadura: o punho fica um pouco atrás e abaixo
+	local wrist = handCF:PointToWorldSpace(Vector3.new(0, -0.02, 0.07))
+	local elbow = solveElbow(shoulder, wrist, pole, ARM.Upper, ARM.Fore)
+	local up = camCF.UpVector
+	segment(arms["Upper" .. side], shoulder, elbow, ARM.UpperWidth, up)
+	segment(arms["Fore" .. side], elbow, wrist, ARM.ForeWidth, up)
+	-- braçadeira no meio do braço
+	local bandA = shoulder:Lerp(elbow, 0.55)
+	local bandB = shoulder:Lerp(elbow, 0.68)
+	segment(arms["Band" .. side], bandA, bandB, ARM.BandWidth, up)
+	arms["Hand" .. side].CFrame = handCF
 end
 
 -- Desloca peças marcadas (carregador, telha, ferrolho) em relação ao Handle.
@@ -385,10 +449,10 @@ local function render(dt: number)
 		end
 	end
 
-	-- Braços: antebraços do cotovelo (fora da tela) até as mãos
+	-- Braços: IK do ombro (fora da tela) até as mãos na arma
 	local sScale = vm.Scale
 	local handRCF = final * CFrame.new(0, -0.08 * sScale, 0.05 * sScale)
-	placeArm(arms.SleeveR, arms.HandR, camCF, FOREARM_DIR_R, handRCF)
+	placeArm("R", camCF, handRCF)
 	local lh = handle:FindFirstChild("LeftHand") :: Attachment?
 	if lh then
 		local handLCF = CFrame.new(lh.WorldPosition) * final.Rotation
@@ -398,7 +462,7 @@ local function render(dt: number)
 			local away = math.sin(math.clamp((p - 0.15) / 0.7, 0, 1) * math.pi)
 			handLCF = handLCF * CFrame.new(0, -0.35 * away, 0.25 * away)
 		end
-		placeArm(arms.SleeveL, arms.HandL, camCF, FOREARM_DIR_L, handLCF)
+		placeArm("L", camCF, handLCF)
 	end
 
 	setHidden(AimController.isScoped())
@@ -409,10 +473,12 @@ function ViewmodelController.init()
 	folder = Instance.new("Model")
 	folder.Name = "Viewmodel"
 	folder.Parent = camera
-	arms.SleeveR = makeArmPart("SleeveR", teamColor(), Vector3.new(ARM_WIDTH, ARM_WIDTH, 1))
-	arms.SleeveL = makeArmPart("SleeveL", teamColor(), Vector3.new(ARM_WIDTH, ARM_WIDTH, 1))
-	arms.HandR = makeArmPart("HandR", GLOVE, Vector3.new(0.11, 0.13, 0.14))
-	arms.HandL = makeArmPart("HandL", GLOVE, Vector3.new(0.11, 0.13, 0.14))
+	for _, side in { "R", "L" } do
+		arms["Upper" .. side] = makeArmPart("Upper" .. side, UNIFORM, Vector3.one * 0.1)
+		arms["Fore" .. side] = makeArmPart("Fore" .. side, UNIFORM_DARK, Vector3.one * 0.1)
+		arms["Band" .. side] = makeArmPart("Band" .. side, teamColor(), Vector3.one * 0.1)
+		arms["Hand" .. side] = makeArmPart("Hand" .. side, GLOVE, ARM.HandSize)
+	end
 	RunService:BindToRenderStep("BlockfrontViewmodel", Enum.RenderPriority.Camera.Value + 1, render)
 end
 
