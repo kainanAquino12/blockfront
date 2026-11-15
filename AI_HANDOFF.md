@@ -232,3 +232,13 @@ Leia, entenda e teste antes e depois de mexer:
 - Prédios novos devem usar `B{...}` em `MapLayout` (que chama `StructureKit.facadeBuilding`), não `StructureKit.building` direto.
 - FOV do jogador: atributo `FieldOfView` (padrão 80) via `SettingsController`.
 - Ver `DEVELOPMENT_LOG.md` (entrada V3) para a lista de arquivos e `KNOWN_BUGS.md` para o que falta testar.
+
+
+## Atualização V4 (2026-11-15)
+
+- Prédios novos: use `server/Map/BuildingKit.luau` (elementos com tipo estrutural). Modelo de referência:
+  `server/Map/Buildings/EdificioCentral.luau`. Estruturas criadas com `Elements`/`ElementOf` ganham `StructuralGraph`.
+- Tudo que cai vira corpo físico em `CollapseBodies` (não apague células "soltas" diretamente).
+- Parâmetros de colapso e limites de performance: `shared/Config/StructuralConfig.luau`.
+- Testes no Studio (Server): `game.ServerStorage.DevStructure:Invoke("teleport" | "breakName", nome | "elements", padrão | "stats")`.
+- Atenção: o primeiro jogador escolher time reinicia a rodada e reconstrói o mapa (a destruição volta ao zero).

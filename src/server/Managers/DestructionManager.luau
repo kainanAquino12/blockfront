@@ -34,6 +34,7 @@ local RunService = game:GetService("RunService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local DestructionConfig = require(ReplicatedStorage.Shared.Config.DestructionConfig)
+local StructuralConfig = require(ReplicatedStorage.Shared.Config.StructuralConfig)
 local Remotes = require(ReplicatedStorage.Shared.Modules.Remotes)
 local VoxelStructure = require(script.Parent.Parent.Destruction.VoxelStructure)
 local StructuralGraph = require(script.Parent.Parent.Destruction.StructuralGraph)
@@ -292,8 +293,11 @@ local function step()
 			end
 		end
 		-- células sem caminho até o chão (pedaços pendurados por nada)
-		if cellsChanged[s] then
+		if cellsChanged[s] and now < (s.NextFloodAt or 0) then
+			needsSupportCheck[s] = true -- espera o intervalo do flood
+		elseif cellsChanged[s] then
 			cellsChanged[s] = nil
+			s.NextFloodAt = now + StructuralConfig.FloodInterval
 			local loose = s.Grid:findUnsupported()
 			if #loose > 0 then
 				local center = nearestRecentExplosion(s:CellWorldPosition(loose[1]), now)

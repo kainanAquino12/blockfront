@@ -56,3 +56,24 @@ Backup: tag git `pre-v3`. Diagnóstico em `docs/AUDIT_V3.md`. Prints em `docs/pr
 Arquivos modificados: ClientMain, AimController (novo), CameraController, DestructionEffects, SettingsController,
 TeamSelectController, UIController, ViewmodelController, WeaponController, MapManager, MapLayout, PropKit,
 StructureKit, GameConfig, MaterialConfig, WeaponConfig, WeaponModels.
+
+
+## 2026-11-15 — V4: STRUCTURAL INTEGRITY & PHYSICS COLLAPSE + Edifício Central
+
+Backup: tag `pre-v4`. Plano e resultados em `docs/AUDIT_V4.md`. Prints em `docs/prints_v4/`.
+
+- Viewmodel: braço com IK de 2 ossos (ombro fixo fora da tela, mão na arma, cotovelo calculado); mangas de uniforme, braçadeira do time.
+- Novo `BuildingKit` (construção por elementos) e prédio demonstrativo `EdificioCentral` (6 andares, área de demo em x=420).
+- Novo `StructuralGraph`: elementos com massa, carga de projeto, capacidade, integridade; carga desce pela ordem (altura, nível);
+  elemento pendurado ou sobrecarregado fica instável e rompe depois de 0,35 a 0,9 s (colapso progressivo).
+- Novo `CollapseBodies`: o que perde apoio vira corpo rígido (blocos de 7 a 12 células), cai, causa dano onde bate,
+  vira entulho persistente; limpeza do entulho mais antigo acima de 1.800 Parts.
+- `DestructionManager`: integra grafo e corpos; o desmoronamento antigo (células apagadas de baixo para cima) foi substituído
+  pelos corpos físicos em TODAS as estruturas; `destroyElement`, `findStructure`, tempos de passo nas estatísticas.
+- DevTools: `ServerStorage.DevStructure` (teleport, breakName, elements, stats, explode).
+- Materiais novos: ReinforcedConcrete, Gypsum, TintedGlass, FacadePanel.
+
+Arquivos novos: `shared/Config/StructuralConfig.luau`, `server/Destruction/StructuralGraph.luau`,
+`server/Destruction/CollapseBodies.luau`, `server/Map/BuildingKit.luau`, `server/Map/Buildings/EdificioCentral.luau`.
+Arquivos modificados: `ViewmodelController`, `WeaponConfig` (poses), `MaterialConfig`, `GameConfig` (DemoArea),
+`DestructionManager`, `MapManager`, `DevToolsManager`.

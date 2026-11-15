@@ -58,17 +58,22 @@ StructuralConfig.Density = {
 StructuralConfig.UnstableDelayMin = 0.35
 StructuralConfig.UnstableDelayMax = 0.9
 
+-- Flood de conectividade (custo O(células)) no máximo a cada X s por estrutura.
+StructuralConfig.FloodInterval = 0.3
+
 -- Rupturas por passo de servidor (o resto fica para os próximos passos).
 StructuralConfig.MaxBreaksPerStep = 6
 
 -- Corpos físicos do colapso (servidor).
 StructuralConfig.Bodies = {
 	BlockSize = 7, -- células: blocos de até 7x7x7 viram um corpo
+	BlockSizeMedium = 9, -- pedido com mais de 400 células
+	BlockSizeLarge = 12, -- pedido com mais de 1500 células (andar inteiro cedendo)
 	MaxActive = 72, -- corpos simulando ao mesmo tempo; o resto espera na fila (no lugar)
-	MaxPartsPerBody = 14,
+	MaxPartsPerBody = 20,
 	SettleSpeed = 1.2, -- studs/s: abaixo disso conta como parado
-	SettleTime = 1.2, -- parado por este tempo -> ancora e vira entulho
-	MaxSimTime = 12, -- força a ancoragem depois disso
+	SettleTime = 0.8, -- parado por este tempo -> ancora e vira entulho
+	MaxSimTime = 8, -- força a ancoragem depois disso
 	KillY = -60,
 	-- Entulho persistente: acima do orçamento, os mais antigos somem aos poucos.
 	MaxRubbleParts = 1800,

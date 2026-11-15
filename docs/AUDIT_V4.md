@@ -132,3 +132,35 @@ Também vou medir FPS, tempo de Heartbeat do servidor, Parts e corpos ativos, e 
 | 8 | *(só depois da sua aprovação)* novo mapa em escala grande usando o padrão aprovado; remoção de árvores e carros de brinquedo | `MapLayout`, `PropKit` |
 
 Fica de fora até a Fase 8: redesenhar o mapa todo e trocar props.
+
+
+---
+
+## Estado em 2026-11-15 (fases 2 a 6 feitas, 7 parcial)
+
+| Fase | Situação | Como foi verificado |
+|---|---|---|
+| 2 Viewmodel | Feito: rig com IK de 2 ossos (`ViewmodelController`, tabela `ARM`), mangas de uniforme, braçadeira do time | Prints no Studio; ADS conferido com mouse real no rifle e na pistola |
+| 3 Edifício Central | Feito: `Map/BuildingKit.luau` + `Map/Buildings/EdificioCentral.luau`, área de demo em x=420 (`GameConfig.DemoArea`) | 765 elementos, ~27 mil células, ~1.450 Parts; 0 avisos de projeto |
+| 4 Interior | Feito: lobby, salas com divisórias, corredor, planta livre com mesas, muretas no 5º, escada em U em todos os andares, casa de escada na cobertura | Geometria conferida no código; **não andei pela escada com o personagem** |
+| 5 Integridade | Feito: `Destruction/StructuralGraph.luau`, parâmetros em `Config/StructuralConfig.luau` | Testes abaixo |
+| 6 Colapso físico | Feito: `Destruction/CollapseBodies.luau` (corpos rígidos, impacto em cascata, entulho persistente, limpeza) | Testes abaixo |
+| 7 Multiplayer | Parcial: medido em Play Solo. **Teste com 2 clientes não foi feito** (a integração com o Studio só inicia Play Solo) | Números abaixo |
+| 8 Mapa | Não iniciado (aguarda aprovação do prédio) | — |
+
+### Testes de destruição (Studio, comandos `ServerStorage.DevStructure`)
+
+1. **Parede** (`Peitoril_S_A2_2`): sai sozinha; 0 elementos caíram junto.
+2. **Pilar** (`Pilar_31_A0`): a coluna de cima fica pendurada nas vigas, as vigas sobrecarregam e cedem; a linha de pilares, as vigas e as lajes daquele vão caem andar por andar em ~4 s (27 elementos, 78 corpos). O resto fica de pé.
+3. **Viga** (`VigaX_N3_L1_V1`): a laje vizinha continua apoiada nas outras 3 vigas (correto).
+4. **Laje** (`Laje_N4_V11`): sai sozinha.
+5. **Perda de apoio de um andar / 6. colapso parcial** (3 pilares da frente): a frente desaba em etapas, 126 elementos, ~390 Parts de entulho, 33 células viraram poeira.
+7. **Colapso grande** (8 pilares do térreo): 314 elementos, 524 corpos, 843 Parts de entulho; terminou em ~16 s.
+8. **Destroços no chão**: corpos colidem com o chão, com outros destroços e com os andares de baixo (37 impactos em cascata no teste 7).
+
+### Desempenho medido (Play Solo: servidor e cliente no mesmo processo)
+
+- Passo do DestructionManager: até 43 ms no pico do colapso grande (13 a 20 ms na maior parte).
+- Heartbeat do servidor durante o colapso grande: médio 29 ms, pior 116 ms. **Acima do ideal (16,7 ms).**
+- Cliente: ~31 FPS durante o colapso grande no Studio.
+- Fila de corpos: no colapso grande, blocos esperaram até ~10 s no lugar antes de cair (limite de 72 corpos ativos).

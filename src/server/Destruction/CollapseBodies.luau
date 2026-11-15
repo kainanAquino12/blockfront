@@ -120,7 +120,14 @@ function CollapseBodies.enqueue(s, cells: { number }, impulseFrom: Vector3?)
 	end
 	s.QueuedCells = s.QueuedCells or {}
 	local grid = s.Grid
+	-- desabamentos grandes (pedido grande ou fila longa) usam blocos maiores:
+	-- menos corpos, a fila anda rápido e nada fica muito tempo parado no ar
 	local B = cfg.BlockSize
+	if #cells > 1500 or #queue > 120 then
+		B = cfg.BlockSizeLarge
+	elseif #cells > 400 or #queue > 40 then
+		B = cfg.BlockSizeMedium
+	end
 	local buckets: { [number]: Block } = {}
 	for _, i in cells do
 		if not s.QueuedCells[i] and grid:getMaterial(i) ~= 0 then

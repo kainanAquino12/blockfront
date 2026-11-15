@@ -21,6 +21,19 @@ Lista só o que foi observado ou pode ser verificado no código. Nada aqui foi i
 7. **Armas não testadas em ADS no V3:** SMG, LMG, sniper e escopeta (não estão no kit padrão do teste).
    Rifle, pistola e lança-foguetes foram testados com mouse real.
 
+## V4 (colapso estrutural)
+
+8. **Custo do colapso grande acima do ideal** em Play Solo: heartbeat do servidor médio 29 ms, pior 116 ms; passo de
+   destruição até 43 ms. Precisa de teste em servidor real / Team Test com 2+ clientes.
+9. **Fila de corpos** (`StructuralConfig.Bodies.MaxActive = 72`): num colapso grande, blocos esperam até ~10 s parados
+   no lugar antes de cair.
+10. **Entulho pode ficar preso no meio da queda** (encaixado entre partes que ficaram de pé) e é ancorado assim.
+11. **Prédios antigos do mapa** não têm grafo estrutural: só usam conectividade (um pilar ainda segura tudo),
+    mas o que cai agora vira corpo físico em vez de sumir.
+12. **Escada do Edifício Central não foi percorrida** com o personagem.
+13. **Armas na mão (terceira pessoa)** continuam grandes demais para o personagem (rifle de ~4,6 studs); só o viewmodel foi corrigido.
+14. **Destroços não causam dano em jogadores** (esmagamento não implementado).
+
 ## Riscos e limitações (não testados)
 
 - **Multijogador nunca testado** com 2 ou mais jogadores reais: abate, feed, balanceamento, replicação de tiros e fragmentos.
