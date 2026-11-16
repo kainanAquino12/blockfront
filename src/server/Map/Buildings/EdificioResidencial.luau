@@ -35,6 +35,9 @@ function Res.build(opts: { Floors: number?, Wall: string?, Damaged: boolean? }?)
 		return k * FH
 	end
 	local b = BuildingKit.new(S + MARGIN * 2, L(FLOORS) + 14, S + MARGIN * 2, Vector3.new(MARGIN, 0, MARGIN))
+	if damaged then
+		b.lightKind = "Emergency" -- prédio abandonado: só a luz de emergência ainda funciona
+	end
 	b:add("Foundation", RC, -1, 0, -1, S, 0, S, "Fundacao")
 
 	for k = 1, FLOORS do
@@ -68,7 +71,9 @@ function Res.build(opts: { Floors: number?, Wall: string?, Damaged: boolean? }?)
 	for k = 0, FLOORS do
 		table.insert(levels, L(k))
 	end
-	b:stairCore(13, 10, levels, { Penthouse = 7, Name = "Nucleo" })
+	-- núcleo em x 15..22: a porta (lado oeste, z 11..13) abre para um hall de 2 de largura
+	-- entre o núcleo e a linha de pilares x 11..12 (em x 13 a porta ficava atrás de um pilar)
+	b:stairCore(15, 10, levels, { Penthouse = 7, Name = "Nucleo" })
 
 	-- fachadas
 	local bays = { { 2, 10, 1 }, { 13, 21, 2 }, { 24, 31, 3 } }
@@ -151,6 +156,12 @@ function Res.build(opts: { Floors: number?, Wall: string?, Damaged: boolean? }?)
 	b:add("Wall", "Concrete", 0, yr, 1, 0, yr + 1, S - 2, "Platibanda_O")
 	b:add("Wall", "Concrete", S - 1, yr, 1, S - 1, yr + 1, S - 2, "Platibanda_L")
 	b:add("Prop", "SheetMetal", 25, yr, 25, 29, yr + 4, 29, "CaixaDagua")
+	-- telhado como posição de combate: ar-condicionado, exaustores, muretas de cobertura
+	b:add("Prop", "DarkMetal", 3, yr, 3, 7, yr + 2, 6, "ArCondicionado_1")
+	b:add("Prop", "DarkMetal", 3, yr, 26, 6, yr + 2, 30, "ArCondicionado_2")
+	b:add("Prop", "SheetMetal", 26, yr, 4, 27, yr + 1, 5, "Exaustor_1")
+	b:add("Prop", "SheetMetal", 10, yr, 28, 11, yr + 1, 29, "Exaustor_2")
+	b:add("Wall", "Concrete", 9, yr, 4, 13, yr + 1, 4, "Mureta_1")
 
 	-- versão abandonada: quina nordeste desabada nos 3 últimos andares
 	if damaged then

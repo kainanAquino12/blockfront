@@ -193,7 +193,8 @@ function Admin.build()
 	---------------------------------------------------------------------
 	-- Pórtico: colunata de pedra (pilares reais) + entablamento
 	---------------------------------------------------------------------
-	for z = 4, D - 6, 5 do
+	-- colunas a cada 7 (vão livre de 5 entre elas: passa um jogador de qualquer tamanho)
+	for z = 4, D - 6, 7 do
 		local onGrid = false
 		for _, cz in COLS_Z do
 			if z == cz or z == cz + 1 then

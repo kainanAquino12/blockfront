@@ -111,6 +111,7 @@ local function removeCells(s, cells: { number })
 		if mat ~= 0 then
 			grid:clearCell(i)
 			markDirty(s, i)
+			s:RemoveFixtureAt(i)
 			table.insert(p.collapse, i)
 			table.insert(p.collapseMats, mat)
 			stats.CellsCollapsed += 1
@@ -181,6 +182,7 @@ function DestructionManager.explode(position: Vector3, radius: number, damage: n
 				local p = getPending(s)
 				for n, i in destroyed do
 					markDirty(s, i)
+					s:RemoveFixtureAt(i)
 					table.insert(p.idx, i)
 					table.insert(p.mats, mats[n])
 					if s.Graph then
@@ -236,6 +238,7 @@ function DestructionManager.destroyElement(structureName: string, elementName: s
 		local mat = grid:getMaterial(i)
 		grid:clearCell(i)
 		markDirty(s, i)
+		s:RemoveFixtureAt(i)
 		table.insert(p.idx, i)
 		table.insert(p.mats, mat)
 		s.Graph:cellRemoved(i)

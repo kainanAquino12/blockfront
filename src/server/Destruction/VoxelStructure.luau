@@ -22,6 +22,16 @@ local DestructionConfig = require(game:GetService("ReplicatedStorage").Shared.Co
 local VoxelGrid = require(game:GetService("ReplicatedStorage").Shared.Modules.VoxelGrid)
 local GreedyMesher = require(game:GetService("ReplicatedStorage").Shared.Modules.GreedyMesher)
 local PartPool = require(script.Parent.PartPool)
+local CollectionService = game:GetService("CollectionService")
+
+-- Luminárias internas (V8). Ficam fora dos chunks (não são remontadas) e
+-- presas a uma célula do teto: se ela for destruída, a luminária some.
+local FIXTURES = {
+	Fluorescent = { Size = Vector3.new(3.2, 0.25, 0.8), Color = Color3.fromRGB(206, 208, 200), Light = Color3.fromRGB(255, 240, 220), Range = 18, Brightness = 0.85 },
+	Stair = { Size = Vector3.new(1.6, 0.25, 0.8), Color = Color3.fromRGB(206, 208, 200), Light = Color3.fromRGB(255, 240, 220), Range = 16, Brightness = 0.9 },
+	Industrial = { Size = Vector3.new(1.6, 0.6, 1.6), Color = Color3.fromRGB(255, 226, 170), Light = Color3.fromRGB(255, 220, 170), Range = 32, Brightness = 1.4 },
+	Emergency = { Size = Vector3.new(0.7, 0.4, 0.7), Color = Color3.fromRGB(255, 70, 50), Light = Color3.fromRGB(255, 80, 60), Range = 15, Brightness = 1.3 },
+}
 
 export type FillFunction = (x: number, y: number, z: number) -> number
 
@@ -90,6 +100,37 @@ function VoxelStructure.new(params: StructureParams)
 	for ci = 0, total - 1 do
 		self:RebuildChunk(ci)
 	end
+	-- luminárias
+	self.FixtureByCell = {} :: { [number]: BasePart }
+	if params.Fixtures and #params.Fixtures > 0 then
+		local lights = Instance.new("Folder")
+		lights.Name = "Luzes"
+		lights.Parent = model
+		for _, f in params.Fixtures do
+			local def = FIXTURES[f.kind] or FIXTURES.Fluorescent
+			local p = Instance.new("Part")
+			p.Name = "Luminaria_" .. f.kind
+			p.Anchored = true
+			p.CanCollide = false
+			p.CanQuery = false
+			p.CanTouch = false
+			p.CastShadow = false
+			p.Material = Enum.Material.Neon
+			p.Color = def.Color
+			p.Size = def.Size
+			p.CFrame = params.Origin * CFrame.new((f.x + 0.5) * vs, (f.y + 1) * vs - def.Size.Y / 2 - 0.02, (f.z + 0.5) * vs)
+			local l = Instance.new("PointLight")
+			l.Color = def.Light
+			l.Range = def.Range
+			l.Brightness = def.Brightness
+			l.Shadows = false
+			l.Parent = p
+			CollectionService:AddTag(l, "BFInteriorLight")
+			p.Parent = lights
+			self.FixtureByCell[grid:index(f.x, f.y + 1, f.z)] = p
+		end
+	end
+
 	model.Parent = params.Parent
 
 	return self
@@ -161,6 +202,15 @@ function VoxelStructure:RebuildChunk(ci: number)
 	for n = #parts, #boxes + 1, -1 do
 		PartPool.release(parts[n])
 		parts[n] = nil
+	end
+end
+
+-- Uma célula do teto foi removida: a luminária presa nela some.
+function VoxelStructure:RemoveFixtureAt(i: number)
+	local p = self.FixtureByCell[i]
+	if p then
+		self.FixtureByCell[i] = nil
+		p:Destroy()
 	end
 end
 

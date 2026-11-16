@@ -26,6 +26,7 @@ local H = 14
 function Porto.build()
 	local b = BuildingKit.new(96 + MARGIN * 2, 46, 160 + MARGIN * 2, Vector3.new(MARGIN, 0, MARGIN))
 	b:add("Foundation", RC, 0, 0, 0, 95, 0, 159, "Fundacao")
+	b.lightKind = "Industrial" -- refletores no armazém (luz automática das lajes)
 
 	---------------------------------------------------------------------
 	-- Armazém

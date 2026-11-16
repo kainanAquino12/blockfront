@@ -52,6 +52,10 @@ function Ind.build()
 		for x = 2, HX - 3, 6 do
 			b:extend(t, x, H + 1, z, x, H + 2, z)
 		end
+		-- refletores industriais pendurados na corda inferior da tesoura
+		for _, lx in { 16, 37, 58 } do
+			b:light(lx, H - 1, z, "Industrial")
+		end
 		-- faixa do telhado sobre a tesoura (as chapas e claraboias se prendem nela)
 		b:extend(t, 0, H + 4, z, HX - 1, H + 4, z)
 	end

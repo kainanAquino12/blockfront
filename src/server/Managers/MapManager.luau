@@ -102,6 +102,7 @@ local function makeContext(mode: string, static: Instance, destructibles: Instan
 			Fill = fill,
 			Elements = def.Elements,
 			ElementOf = elementOf,
+			Fixtures = def.Fixtures,
 			Parent = destructibles,
 		})
 	end
@@ -140,9 +141,11 @@ local function applyEnvironment()
 	Lighting.ClockTime = 16.3
 	Lighting.GeographicLatitude = 38
 	Lighting.Brightness = 1.6
-	Lighting.Ambient = Color3.fromRGB(70, 72, 78)
+	-- V8: Ambient mais alto = interiores legíveis de dia sem lanterna (Future usa
+	-- o Ambient onde o céu não alcança); o exterior quase não muda.
+	Lighting.Ambient = Color3.fromRGB(90, 90, 95)
 	Lighting.OutdoorAmbient = Color3.fromRGB(108, 108, 112)
-	Lighting.EnvironmentDiffuseScale = 0.8
+	Lighting.EnvironmentDiffuseScale = 1
 	Lighting.EnvironmentSpecularScale = 0.4
 	Lighting.GlobalShadows = true
 	Lighting.ShadowSoftness = 0.2

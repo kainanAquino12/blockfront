@@ -162,6 +162,11 @@ function Sec.oficina()
 		b:add("Beam", "Metal", 1, H, z, W - 2, H, z, ("Terca_%d"):format(z))
 	end
 	b:add("Roof", "SheetMetal", 0, H + 1, 0, W - 1, H + 1, D - 1, "Telhado")
+	for _, lz in { 6, 10 } do
+		for _, lx in { 6, 13 } do
+			b:light(lx, H - 1, lz, "Industrial")
+		end
+	end
 	-- fosso, elevador e bancadas
 	b:carve(4, 0, 6, 6, 0, 12)
 	b:add("Prop", "DarkMetal", 9, 1, 6, 9, 5, 7, "Elevador_Coluna")
@@ -200,6 +205,9 @@ function Sec.deposito()
 		end
 		-- vidro vertical do shed: as pontas apoiam no topo das paredes laterais
 		b:add("Glass", "Glass", 0, H + 1, z0 + 6, W - 1, H + 4, z0 + 6, ("Shed_Vidro_%d"):format(s))
+		for _, lx in { 8, 15, 22 } do
+			b:light(lx, H, z0, "Industrial")
+		end
 	end
 	for _, c in { { 3, 3 }, { 3, 10 }, { 22, 4 }, { 22, 12 } } do
 		b:add("Prop", "Wood", c[1], 1, c[2], c[1] + 4, 4, c[2] + 4, ("Caixas_%d_%d"):format(c[1], c[2]))

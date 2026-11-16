@@ -9,6 +9,7 @@ local Controllers = script.Parent.Controllers
 require(Controllers.SettingsController).init()
 require(Controllers.AudioController).init()
 require(Controllers.DestructionEffects).init()
+require(Controllers.InteriorLightController).init()
 require(Controllers.CameraController).init()
 require(Controllers.MovementController).init()
 require(Controllers.AimController).init()

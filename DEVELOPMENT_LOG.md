@@ -111,3 +111,22 @@ Detalhes em `docs/MAPA_V5.md` (seção V7). Novos: `Buildings/Secundarias.luau` 
 depósito, parque de tanques, celeiro), `WorldProps.luau` (postes, semáforos, placas, fiação, bueiros, geradores,
 tubulações, contêineres, veículos destruídos, árvores, arbustos, rochas). `MapLayout`: buildCityBlocks, buildIndustry,
 buildPeriphery; entulho/fumaça em RuinsAndDebris. `MapManager`: distritos atualizados.
+
+
+## 2026-11-16 — V8: interiores iluminados e acesso ao telhado
+
+- Luz interna: `BuildingKit` gera luminárias automaticamente (uma ou duas por painel de laje com ambiente embaixo),
+  luz em cada patamar de escada e na casa de escada; refletores industriais nas naves (Industrial, Porto, Depósito,
+  Oficina); luz de EMERGÊNCIA (vermelha) no prédio abandonado. `BuildingKit:light(x, y, z, kind)` para luz manual.
+- As luminárias ficam presas à célula do teto (`VoxelStructure.FixtureByCell`): teto destruído = luminária some
+  (testado: explosão no teto do Administrativo removeu as luminárias daquele trecho).
+- Desempenho: `InteriorLightController` (cliente) só liga PointLights a menos de 150 studs da câmera; sem sombras.
+  612 luminárias no mapa.
+- `Lighting.Ambient` 70 -> 90 e `EnvironmentDiffuseScale` 1 (interiores legíveis de dia).
+- Acesso: portas dos núcleos de escada com 4 de largura; núcleo do Residencial movido (a porta ficava atrás de um pilar);
+  colunata do Administrativo com vão de 5 (o jogador ficava preso entre colunas).
+- Telhado do Residencial: ar-condicionado, exaustores e mureta (coberturas).
+
+Validação (Studio, teclado real, sem teleporte): rua -> colunata -> portal -> saguão -> núcleo -> 6 andares ->
+porta da casa de escada -> telhado do Administrativo (y 7 -> 60). Residencial: rua -> portaria -> escada -> 1º andar.
+Servidor 16,7 ms com 22,3 mil Parts. Não testado: 2+ jogadores; percurso completo nas Torres, Residencial e QG.

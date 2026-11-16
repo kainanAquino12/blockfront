@@ -32,6 +32,8 @@ function BuildingKit.new(sx: number, sy: number, sz: number, offset: Vector3?)
 	self.mats = buffer.create(self.count)
 	self.elem = buffer.create(self.count * 2)
 	self.elements = {}
+	self.fixtures = {} -- luminárias { x, y, z, kind } (coordenadas da grade)
+	self.lightKind = "Fluorescent"
 	return self
 end
 
@@ -91,9 +93,86 @@ function BuildingKit:carve(x0, y0, z0, x1, y1, z1)
 	end)
 end
 
-function BuildingKit:finish()
+--[[
+	Luminária pendurada no teto. (x, y, z) em coordenadas locais (com offset):
+	a luminária fica no topo da célula (x, y, z) e se prende na célula de
+	cima (o teto). Se o teto for destruído, a luminária some junto.
+	kind: "Fluorescent" | "Industrial" | "Emergency" | "Stair"
+]]
+function BuildingKit:light(x: number, y: number, z: number, kind: string?)
+	local o = self.off
+	table.insert(self.fixtures, { x = x + o.X, y = y + o.Y, z = z + o.Z, kind = kind or self.lightKind })
+end
+
+function BuildingKit:_solid(x: number, y: number, z: number): boolean
+	if x < 0 or y < 0 or z < 0 or x >= self.sx or y >= self.sy or z >= self.sz then
+		return false
+	end
+	return buffer.readu8(self.mats, x + self.sx * y + self.sx * self.sy * z) ~= 0
+end
+
+--[[
+	Luz automática: uma luminária no centro de cada painel de laje com
+	espaço vazio embaixo (salas, corredores, galpões). Painéis grandes ganham
+	duas. Ignora sacadas, marquises e tabuleiros de ponte.
+]]
+function BuildingKit:_autoLights()
+	local sx, sy, sz = self.sx, self.sy, self.sz
+	local sxy = sx * sy
+	local mins, maxs = {}, {}
+	for i = 0, self.count - 1 do
+		local id = buffer.readu16(self.elem, i * 2)
+		if id ~= 0 and buffer.readu8(self.mats, i) ~= 0 and self.elements[id].Type == "Slab" then
+			local x, y, z = i % sx, (i // sx) % sy, i // sxy
+			local a, b = mins[id], maxs[id]
+			if not a then
+				mins[id] = Vector3.new(x, y, z)
+				maxs[id] = Vector3.new(x, y, z)
+			else
+				mins[id] = a:Min(Vector3.new(x, y, z))
+				maxs[id] = b:Max(Vector3.new(x, y, z))
+			end
+		end
+	end
+	for id, a in mins do
+		local name = self.elements[id].Name
+		local b = maxs[id]
+		local w, d = b.X - a.X + 1, b.Z - a.Z + 1
+		if w * d >= 30 and math.min(w, d) >= 4 and not (string.find(name, "Sacada") or string.find(name, "Marquise") or string.find(name, "Tabuleiro")) then
+			local spots
+			if w * d > 150 then
+				if w >= d then
+					spots = { { a.X + w * 0.3, (a.Z + b.Z) / 2 }, { a.X + w * 0.7, (a.Z + b.Z) / 2 } }
+				else
+					spots = { { (a.X + b.X) / 2, a.Z + d * 0.3 }, { (a.X + b.X) / 2, a.Z + d * 0.7 } }
+				end
+			else
+				spots = { { (a.X + b.X) / 2, (a.Z + b.Z) / 2 } }
+			end
+			for _, sp in spots do
+				local x, z, y = math.floor(sp[1]), math.floor(sp[2]), a.Y
+				-- teto sólido e pelo menos 3 células livres embaixo (é um ambiente)
+				if self:_solid(x, y, z) and not self:_solid(x, y - 1, z) and not self:_solid(x, y - 2, z) and not self:_solid(x, y - 3, z) then
+					table.insert(self.fixtures, { x = x, y = y - 1, z = z, kind = self.lightKind })
+				end
+			end
+		end
+	end
+end
+
+function BuildingKit:finish(opts: { NoAutoLights: boolean? }?)
 	local mats = self.mats
 	local sx, sxy = self.sx, self.sx * self.sy
+	if not (opts and opts.NoAutoLights) then
+		self:_autoLights()
+	end
+	-- descarta luminárias cujo teto não existe (vãos, poços)
+	local fixtures = {}
+	for _, f in self.fixtures do
+		if self:_solid(f.x, f.y + 1, f.z) and not self:_solid(f.x, f.y, f.z) then
+			table.insert(fixtures, f)
+		end
+	end
 	return {
 		Size = Vector3.new(self.sx, self.sy, self.sz),
 		Fill = function(x: number, y: number, z: number): number
@@ -101,6 +180,7 @@ function BuildingKit:finish()
 		end,
 		Elements = self.elements,
 		ElementOf = self.elem,
+		Fixtures = fixtures,
 	}
 end
 
@@ -121,7 +201,14 @@ function BuildingKit.flipZ(def)
 		Elements = def.Elements,
 		ElementOf = nil,
 		Offset = def.Offset,
+		Fixtures = nil,
 	}
+	if def.Fixtures then
+		out.Fixtures = {}
+		for _, f in def.Fixtures do
+			table.insert(out.Fixtures, { x = f.x, y = f.y, z = sz - 1 - f.z, kind = f.kind })
+		end
+	end
 	if def.ElementOf then
 		local sxy = sx * sy
 		local src = def.ElementOf
@@ -168,11 +255,18 @@ function BuildingKit:stairCore(x0: number, z0: number, levels: { number }, opts:
 		self:add("BearingWall", RC, x0, y0, z0, x1, y1, z0, tag .. "_S")
 		self:add("BearingWall", RC, x0, y0, z1, x1, y1, z1, tag .. "_N")
 		local fy = levels[f + 1] + 1
-		self:carve(x0, fy, z0 + 1, x0, fy + 6, z0 + 3)
+		self:carve(x0, fy, z0 + 1, x0, fy + 6, z0 + 4) -- porta de 4 de largura
 	end
 	if ph then
 		local yt = levels[n + 1] + ph + 1
 		self:add("Roof", RC, x0, yt, z0, x1, yt, z1, name .. "_Teto")
+	end
+	-- luz em cada patamar (sob a faixa de laje) e na casa de escada
+	for k = 2, n + 1 do
+		self:light(x0 + 2, levels[k] - 1, z0 + 2, "Stair")
+	end
+	if ph then
+		self:light(x0 + 2, levels[n + 1] + ph, z0 + 2, "Stair")
 	end
 	-- poço nas lajes (mantém a faixa de patamar z0+1..z0+4)
 	for k = 2, n + 1 do
@@ -208,7 +302,14 @@ function BuildingKit.swapXZ(def)
 			return f(z, y, x)
 		end,
 		Elements = def.Elements,
+		Fixtures = nil,
 	}
+	if def.Fixtures then
+		out.Fixtures = {}
+		for _, fx in def.Fixtures do
+			table.insert(out.Fixtures, { x = fx.z, y = fx.y, z = fx.x, kind = fx.kind })
+		end
+	end
 	if def.ElementOf then
 		local src = def.ElementOf
 		local dst = buffer.create(buffer.len(src))

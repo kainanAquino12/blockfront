@@ -126,7 +126,7 @@ function EdificioCentral.build(opts: { Floors: number? }?)
 		local _ = id
 		-- porta do núcleo para o corredor oeste (abre no patamar z 9..11)
 		local fy = if f == 0 then 1 else L(f) + 1
-		b:carve(CORE.x0, fy, CORE.z0 + 1, CORE.x0, fy + 6, CORE.z0 + 3)
+		b:carve(CORE.x0, fy, CORE.z0 + 1, CORE.x0, fy + 6, CORE.z0 + 4)
 	end
 	-- laje da casa de escada
 	b:add("Roof", RC, CORE.x0, L(FLOORS) + 8, CORE.z0, CORE.x1, L(FLOORS) + 8, CORE.z1, "CasaEscada_Teto")
