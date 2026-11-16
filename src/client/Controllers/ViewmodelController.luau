@@ -47,25 +47,89 @@ local player = Players.LocalPlayer
 
 local ViewmodelController = {}
 
-local GLOVE = Color3.fromRGB(38, 40, 42)
-local UNIFORM = Color3.fromRGB(72, 76, 64) -- manga (uniforme), igual para os dois times
-local UNIFORM_DARK = Color3.fromRGB(60, 63, 54)
+local GLOVE = Color3.fromRGB(34, 35, 37)
+local GLOVE_PAD = Color3.fromRGB(52, 54, 57)
+local SKIN = Color3.fromRGB(198, 142, 108)
+local UNIFORM = Color3.fromRGB(112, 114, 92) -- manga camuflada (igual para os dois times)
+local UNIFORM_DARK = Color3.fromRGB(92, 94, 76)
+local CAMO = { Color3.fromRGB(64, 70, 50), Color3.fromRGB(150, 140, 110), Color3.fromRGB(46, 48, 38), Color3.fromRGB(96, 104, 76) }
 
 -- Medidas do braço no espaço do viewmodel (studs, relativas à câmera).
 -- Ombros fora do campo de visão; comprimentos chegam à empunhadura de todas
 -- as armas com folga (se não chegar, o braço estica um pouco em vez de soltar
 -- a mão da arma).
 local ARM = {
-	ShoulderR = Vector3.new(0.6, -0.8, -0.3),
-	ShoulderL = Vector3.new(-0.22, -0.82, -0.5),
+	ShoulderR = Vector3.new(0.62, -0.95, -0.05),
+	ShoulderL = Vector3.new(-0.62, -0.92, -0.1),
 	PoleR = Vector3.new(0.6, -1, 0.2), -- direção para onde o cotovelo aponta
-	PoleL = Vector3.new(-0.35, -1, 0.2),
-	Upper = 0.62,
-	Fore = 0.85,
-	UpperWidth = 0.14,
-	ForeWidth = 0.115,
-	HandSize = Vector3.new(0.105, 0.125, 0.16),
-	BandWidth = 0.158,
+	PoleL = Vector3.new(-0.9, -1, 0.1),
+	Upper = 0.68,
+	Fore = 0.6,
+	UpperWidth = 0.23,
+	ForeWidth = 0.2, -- manga do antebraço (perto do cotovelo); afina até o punho
+	CuffWidth = 0.185,
+	BandWidth = 0.24,
+	HandScale = 1.55, -- mãos proporcionais ao antebraço grosso
+}
+
+--[[
+	Mãos (V9): luva tática sem dedos, 5 dedos reconhecíveis, pontas de pele.
+	Cada peça é { nome, tamanho, CFrame local, cor } no referencial da mão,
+	que usa os mesmos eixos da arma (-Z = cano, +Y = cima, +X = direita).
+
+	Mão DIREITA (origem = empunhadura/pistol grip):
+	  dorso da mão do lado de fora (+X), palma do lado de dentro (-X),
+	  4 dedos dobrados em volta da frente da empunhadura (-Z), indicador
+	  estendido no guarda-mato (gatilho), polegar por cima do lado esquerdo.
+	Mão ESQUERDA (origem = Attachment "LeftHand" no guarda-mão):
+	  palma por baixo do guarda-mão, polegar no lado esquerdo, 4 dedos
+	  subindo pelo lado direito com as pontas por cima.
+]]
+local function fingerR(y: number, z: number, curl: number): { any }
+	-- falange (luva) atravessando a frente da empunhadura + ponta de pele no lado de dentro
+	return {
+		{ "Dedo", Vector3.new(0.088, 0.021, 0.024), CFrame.new(0.002, y, z) * CFrame.Angles(0, 0, curl), GLOVE },
+		{ "Ponta", Vector3.new(0.02, 0.019, 0.022), CFrame.new(-0.05, y - 0.004, z + 0.012), SKIN },
+	}
+end
+local HAND_R = {
+	{ "Dorso", Vector3.new(0.034, 0.1, 0.118), CFrame.new(0.046, 0.004, 0.006), GLOVE },
+	{ "Protecao", Vector3.new(0.012, 0.072, 0.07), CFrame.new(0.066, 0.012, 0.0), GLOVE_PAD },
+	{ "Palma", Vector3.new(0.03, 0.098, 0.1), CFrame.new(-0.036, 0.0, 0.012), GLOVE },
+	{ "Punho", Vector3.new(0.1, 0.094, 0.034), CFrame.new(0.004, -0.004, 0.072), GLOVE_PAD },
+	{ "Relogio", Vector3.new(0.024, 0.05, 0.03), CFrame.new(0.058, 0.0, 0.074), Color3.fromRGB(70, 74, 78) },
+	-- polegar: por cima do lado esquerdo, apontando para o cano
+	{ "Polegar", Vector3.new(0.024, 0.024, 0.06), CFrame.new(-0.05, 0.05, -0.03) * CFrame.Angles(0, math.rad(-8), 0), GLOVE },
+	{ "PolegarPonta", Vector3.new(0.022, 0.022, 0.024), CFrame.new(-0.054, 0.05, -0.07), SKIN },
+	-- indicador estendido no gatilho
+	{ "Indicador", Vector3.new(0.022, 0.022, 0.062), CFrame.new(-0.028, 0.044, -0.052), GLOVE },
+	{ "IndicadorPonta", Vector3.new(0.021, 0.021, 0.024), CFrame.new(-0.028, 0.044, -0.094), SKIN },
+}
+for i, y in { 0.018, -0.008, -0.034 } do
+	for _, piece in fingerR(y, -0.058, math.rad(-4 + i * 3)) do
+		table.insert(HAND_R, piece)
+	end
+end
+
+local HAND_L = {
+	{ "Palma", Vector3.new(0.104, 0.03, 0.118), CFrame.new(0.004, -0.06, 0.0), GLOVE },
+	{ "Dorso", Vector3.new(0.03, 0.08, 0.11), CFrame.new(-0.058, -0.03, 0.004), GLOVE },
+	{ "Protecao", Vector3.new(0.012, 0.06, 0.07), CFrame.new(-0.078, -0.028, 0.0), GLOVE_PAD },
+	{ "Punho", Vector3.new(0.092, 0.088, 0.034), CFrame.new(-0.02, -0.07, 0.07), GLOVE_PAD },
+	{ "Polegar", Vector3.new(0.024, 0.024, 0.07), CFrame.new(-0.06, 0.02, -0.03), GLOVE },
+	{ "PolegarPonta", Vector3.new(0.022, 0.022, 0.024), CFrame.new(-0.06, 0.022, -0.075), SKIN },
+}
+for i, z in { -0.042, -0.014, 0.014, 0.04 } do
+	table.insert(HAND_L, { "Dedo" .. i, Vector3.new(0.024, 0.074, 0.024), CFrame.new(0.06, -0.02, z), GLOVE })
+	table.insert(HAND_L, { "Ponta" .. i, Vector3.new(0.022, 0.022, 0.022), CFrame.new(0.05, 0.03, z) * CFrame.Angles(0, 0, math.rad(-35)), SKIN })
+end
+
+-- Manchas da camuflagem (frações ao longo do segmento, lado e tamanho).
+-- { t (0 = ombro/cotovelo, 1 = punho), lado Y (+1 cima / -1 baixo), lado X, comprimento relativo, cor }
+local CAMO_PATCHES = {
+	{ 0.12, 1, 0, 0.2, 1 }, { 0.32, -1, 1, 0.16, 2 }, { 0.5, 1, -1, 0.22, 3 },
+	{ 0.66, -1, 0, 0.18, 4 }, { 0.82, 1, 1, 0.14, 2 }, { 0.42, 0, -1, 0.14, 1 },
+	{ 0.2, 0, 1, 0.16, 3 }, { 0.58, 0, 1, 0.14, 2 }, { 0.75, 0, -1, 0.16, 4 }, { 0.9, -1, 0, 0.1, 1 },
 }
 local SPRINT_POSE = CFrame.new(0.06, -0.14, 0.05) * CFrame.Angles(math.rad(-18), math.rad(38), math.rad(16))
 
@@ -275,20 +339,44 @@ local function solveElbow(shoulder: Vector3, hand: Vector3, pole: Vector3, a: nu
 	return shoulder + dir * (a * cosA) + perp.Unit * (a * sinA)
 end
 
+local handPieces: { [string]: { { part: BasePart, rel: CFrame } } } = { R = {}, L = {} }
+local camoPieces: { [string]: { { part: BasePart, seg: string, t: number, oy: number, ox: number, len: number } } } = { R = {}, L = {} }
+
+-- Manchas de camuflagem acompanham o segmento (Upper/Fore) a cada quadro.
+local function placeCamo(side: string, seg: string, a: Vector3, b: Vector3, width: number, up: Vector3)
+	local len = (b - a).Magnitude
+	local cf = CFrame.lookAt((a + b) / 2, b, up)
+	for _, c in camoPieces[side] do
+		if c.seg == seg then
+			local plen = math.max(len * c.len * 1.5, 0.05)
+			c.part.Size = Vector3.new(if c.ox ~= 0 then 0.006 else width * 0.8, if c.oy ~= 0 then 0.006 else width * 0.75, plen)
+			c.part.CFrame = cf * CFrame.new(c.ox * (width / 2 + 0.002), c.oy * (width / 2 + 0.002), len * (0.5 - c.t))
+		end
+	end
+end
+
+-- Ponto do punho de cada mão (onde o antebraço termina), no referencial da mão.
+local WRIST = { R = Vector3.new(0.006, -0.006, 0.1) * ARM.HandScale, L = Vector3.new(0.024, -0.072, 0.1) * ARM.HandScale }
+
 local function placeArm(side: string, camCF: CFrame, handCF: CFrame)
 	local shoulder = camCF:PointToWorldSpace(ARM["Shoulder" .. side])
 	local pole = camCF:VectorToWorldSpace(ARM["Pole" .. side])
-	-- a mão segura por trás da empunhadura: o punho fica um pouco atrás e abaixo
-	local wrist = handCF:PointToWorldSpace(Vector3.new(0, -0.02, 0.07))
+	local wrist = handCF:PointToWorldSpace(WRIST[side])
 	local elbow = solveElbow(shoulder, wrist, pole, ARM.Upper, ARM.Fore)
 	local up = camCF.UpVector
 	segment(arms["Upper" .. side], shoulder, elbow, ARM.UpperWidth, up)
-	segment(arms["Fore" .. side], elbow, wrist, ARM.ForeWidth, up)
-	-- braçadeira no meio do braço
-	local bandA = shoulder:Lerp(elbow, 0.55)
-	local bandB = shoulder:Lerp(elbow, 0.68)
-	segment(arms["Band" .. side], bandA, bandB, ARM.BandWidth, up)
-	arms["Hand" .. side].CFrame = handCF
+	-- antebraço: manga grossa perto do cotovelo, punho dobrado (cuff) perto da mão
+	local cuffStart = elbow:Lerp(wrist, 0.78)
+	segment(arms["Fore" .. side], elbow, cuffStart, ARM.ForeWidth, up)
+	segment(arms["Cuff" .. side], cuffStart, wrist, ARM.CuffWidth, up)
+	placeCamo(side, "Upper", shoulder, elbow, ARM.UpperWidth, up)
+	placeCamo(side, "Fore", elbow, cuffStart, ARM.ForeWidth, up)
+	-- braçadeira do time no braço
+	segment(arms["Band" .. side], shoulder:Lerp(elbow, 0.55), shoulder:Lerp(elbow, 0.68), ARM.BandWidth, up)
+	-- mão: peças rígidas no referencial da arma
+	for _, h in handPieces[side] do
+		h.part.CFrame = handCF * h.rel
+	end
 end
 
 -- Desloca peças marcadas (carregador, telha, ferrolho) em relação ao Handle.
@@ -451,7 +539,7 @@ local function render(dt: number)
 
 	-- Braços: IK do ombro (fora da tela) até as mãos na arma
 	local sScale = vm.Scale
-	local handRCF = final * CFrame.new(0, -0.08 * sScale, 0.05 * sScale)
+	local handRCF = final * CFrame.new(0, -0.1 * sScale, 0.06 * sScale)
 	placeArm("R", camCF, handRCF)
 	local lh = handle:FindFirstChild("LeftHand") :: Attachment?
 	if lh then
@@ -475,9 +563,33 @@ function ViewmodelController.init()
 	folder.Parent = camera
 	for _, side in { "R", "L" } do
 		arms["Upper" .. side] = makeArmPart("Upper" .. side, UNIFORM, Vector3.one * 0.1)
-		arms["Fore" .. side] = makeArmPart("Fore" .. side, UNIFORM_DARK, Vector3.one * 0.1)
+		arms["Fore" .. side] = makeArmPart("Fore" .. side, UNIFORM, Vector3.one * 0.1)
+		arms["Cuff" .. side] = makeArmPart("Cuff" .. side, UNIFORM_DARK, Vector3.one * 0.1)
 		arms["Band" .. side] = makeArmPart("Band" .. side, teamColor(), Vector3.one * 0.1)
-		arms["Hand" .. side] = makeArmPart("Hand" .. side, GLOVE, ARM.HandSize)
+		arms["Cuff" .. side].Material = Enum.Material.SmoothPlastic
+		arms["Fore" .. side].Material = Enum.Material.SmoothPlastic
+		arms["Upper" .. side].Material = Enum.Material.SmoothPlastic
+		for n, c in CAMO_PATCHES do
+			for _, seg in { "Upper", "Fore" } do
+				local p = makeArmPart(("Camo%s%d%s"):format(seg, n, side), CAMO[c[5]], Vector3.one * 0.05)
+				p.Material = Enum.Material.SmoothPlastic
+				arms[p.Name] = p
+				table.insert(camoPieces[side], { part = p, seg = seg, t = c[1], oy = c[2], ox = c[3], len = c[4] })
+			end
+		end
+		for n, piece in (if side == "R" then HAND_R else HAND_L) do
+			local hs = ARM.HandScale
+			local p = makeArmPart(("Mao%s%d%s"):format(piece[1], n, side), piece[4], piece[2] * hs)
+			p.Material = Enum.Material.SmoothPlastic
+			arms[p.Name] = p
+			-- mão esquerda espelhada em X: dedos no lado visível (esquerdo) do guarda-mão
+			local rel = piece[3]
+			if side == "L" then
+				local rx, ry, rz = rel:ToOrientation()
+				rel = CFrame.new(-rel.X, rel.Y, rel.Z) * CFrame.fromOrientation(rx, -ry, -rz)
+			end
+			table.insert(handPieces[side], { part = p, rel = CFrame.new(rel.Position * hs) * rel.Rotation })
+		end
 	end
 	RunService:BindToRenderStep("BlockfrontViewmodel", Enum.RenderPriority.Camera.Value + 1, render)
 end

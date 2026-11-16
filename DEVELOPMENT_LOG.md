@@ -130,3 +130,9 @@ buildPeriphery; entulho/fumaça em RuinsAndDebris. `MapManager`: distritos atual
 Validação (Studio, teclado real, sem teleporte): rua -> colunata -> portal -> saguão -> núcleo -> 6 andares ->
 porta da casa de escada -> telhado do Administrativo (y 7 -> 60). Residencial: rua -> portaria -> escada -> 1º andar.
 Servidor 16,7 ms com 22,3 mil Parts. Não testado: 2+ jogadores; percurso completo nas Torres, Residencial e QG.
+
+
+## 2026-11-16 — V9: braços e mãos
+
+ViewmodelController: braços ~2x mais grossos (antebraço 0.2, braço 0.23), mais curtos, ombros abaixo da tela; manga camuflada (manchas que acompanham o IK) com punho dobrado; mãos com 5 dedos, luva tática sem dedos (pontas de pele), dorso/palma/punho/relógio, indicador no gatilho, mão esquerda sob o guarda-mão; arma 20% mais perto da câmera (WeaponConfig Hip). ADS conferido no rifle.
+

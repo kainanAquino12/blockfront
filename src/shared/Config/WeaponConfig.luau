@@ -73,7 +73,7 @@ WeaponConfig.Weapons = {
 		Spread = { Hip = 1.4, Aim = 0.2, Move = 1.2, Bloom = 0.22, BloomMax = 2.4, BloomRecovery = 7 },
 		Recoil = { Pitch = 0.5, Yaw = 0.22, Kick = 0.35, Recovery = 7 },
 		WalkMultiplier = 1,
-		Viewmodel = { Scale = 0.36, Hip = CFrame.new(0.46, -0.5, -1.25) * CFrame.Angles(0, rad(3), rad(-2)), AimDistance = 0.95, AimFov = 62, AimSensitivity = 0.75, EquipTime = 0.4 },
+		Viewmodel = { Scale = 0.36, Hip = CFrame.new(0.4232, -0.45, -1) * CFrame.Angles(0, rad(3), rad(-2)), AimDistance = 0.95, AimFov = 62, AimSensitivity = 0.75, EquipTime = 0.4 },
 		Sounds = { Fire = SND.RifleFire, Reload = SND.MagReload, Equip = SND.MagIn, Dry = SND.Dry },
 	},
 	SMG = {
@@ -93,7 +93,7 @@ WeaponConfig.Weapons = {
 		Spread = { Hip = 1.9, Aim = 0.55, Move = 0.9, Bloom = 0.18, BloomMax = 3, BloomRecovery = 9 },
 		Recoil = { Pitch = 0.32, Yaw = 0.32, Kick = 0.25, Recovery = 8 },
 		WalkMultiplier = 1.06,
-		Viewmodel = { Scale = 0.38, Hip = CFrame.new(0.44, -0.48, -1.1) * CFrame.Angles(0, rad(3), rad(-2)), AimDistance = 0.85, AimFov = 66, AimSensitivity = 0.8, EquipTime = 0.3 },
+		Viewmodel = { Scale = 0.38, Hip = CFrame.new(0.4048, -0.432, -0.88) * CFrame.Angles(0, rad(3), rad(-2)), AimDistance = 0.85, AimFov = 66, AimSensitivity = 0.8, EquipTime = 0.3 },
 		Sounds = { Fire = SND.SmgFire, Reload = SND.MagReload, Equip = SND.MagIn, Dry = SND.Dry },
 	},
 	LMG = {
@@ -113,7 +113,7 @@ WeaponConfig.Weapons = {
 		Spread = { Hip = 2.6, Aim = 0.6, Move = 2.0, Bloom = 0.12, BloomMax = 3, BloomRecovery = 5 },
 		Recoil = { Pitch = 0.42, Yaw = 0.42, Kick = 0.4, Recovery = 6 },
 		WalkMultiplier = 0.85,
-		Viewmodel = { Scale = 0.32, Hip = CFrame.new(0.48, -0.54, -1.3) * CFrame.Angles(0, rad(3), rad(-2)), AimDistance = 1.0, AimFov = 62, AimSensitivity = 0.7, EquipTime = 0.6 },
+		Viewmodel = { Scale = 0.32, Hip = CFrame.new(0.4416, -0.486, -1.04) * CFrame.Angles(0, rad(3), rad(-2)), AimDistance = 1.0, AimFov = 62, AimSensitivity = 0.7, EquipTime = 0.6 },
 		Sounds = { Fire = SND.LmgFire, Reload = SND.MagReload, Equip = SND.MagIn, Dry = SND.Dry },
 	},
 	Sniper = {
@@ -133,7 +133,7 @@ WeaponConfig.Weapons = {
 		Spread = { Hip = 5, Aim = 0, Move = 3, Bloom = 0, BloomMax = 0, BloomRecovery = 10 },
 		Recoil = { Pitch = 3.2, Yaw = 0.6, Kick = 1.2, Recovery = 5 },
 		WalkMultiplier = 0.92,
-		Viewmodel = { Scale = 0.32, Hip = CFrame.new(0.46, -0.52, -1.25) * CFrame.Angles(0, rad(3), rad(-2)), AimDistance = 0.6, AimFov = 18, AimSensitivity = 0.3, EquipTime = 0.55, Scope = true },
+		Viewmodel = { Scale = 0.32, Hip = CFrame.new(0.4232, -0.468, -1) * CFrame.Angles(0, rad(3), rad(-2)), AimDistance = 0.6, AimFov = 18, AimSensitivity = 0.3, EquipTime = 0.55, Scope = true },
 		Sounds = { Fire = SND.SniperFire, Reload = SND.MagReload, Equip = SND.Bolt, Cycle = SND.Bolt, Dry = SND.Dry },
 	},
 	Shotgun = {
@@ -155,7 +155,7 @@ WeaponConfig.Weapons = {
 		Spread = { Hip = 0.8, Aim = 0.3, Move = 0.6, Bloom = 0, BloomMax = 0, BloomRecovery = 10 },
 		Recoil = { Pitch = 2.6, Yaw = 0.7, Kick = 1.0, Recovery = 6 },
 		WalkMultiplier = 1,
-		Viewmodel = { Scale = 0.36, Hip = CFrame.new(0.46, -0.52, -1.2) * CFrame.Angles(0, rad(3), rad(-2)), AimDistance = 0.9, AimFov = 70, AimSensitivity = 0.85, EquipTime = 0.45 },
+		Viewmodel = { Scale = 0.36, Hip = CFrame.new(0.4232, -0.468, -0.96) * CFrame.Angles(0, rad(3), rad(-2)), AimDistance = 0.9, AimFov = 70, AimSensitivity = 0.85, EquipTime = 0.45 },
 		Sounds = { Fire = SND.ShotgunFire, Reload = SND.Pump, Equip = SND.ShotgunEquip, Cycle = SND.Pump, Dry = SND.Dry },
 	},
 	Pistol = {
@@ -175,7 +175,7 @@ WeaponConfig.Weapons = {
 		Spread = { Hip = 1.2, Aim = 0.3, Move = 0.8, Bloom = 0.4, BloomMax = 2.4, BloomRecovery = 8 },
 		Recoil = { Pitch = 1.0, Yaw = 0.3, Kick = 0.5, Recovery = 8 },
 		WalkMultiplier = 1.06,
-		Viewmodel = { Scale = 0.42, Hip = CFrame.new(0.34, -0.42, -1.05) * CFrame.Angles(0, rad(3), 0), AimDistance = 1.0, AimFov = 70, AimSensitivity = 0.85, EquipTime = 0.25 },
+		Viewmodel = { Scale = 0.42, Hip = CFrame.new(0.3128, -0.378, -0.84) * CFrame.Angles(0, rad(3), 0), AimDistance = 1.0, AimFov = 70, AimSensitivity = 0.85, EquipTime = 0.25 },
 		Sounds = { Fire = SND.PistolFire, Reload = SND.PistolReload, Equip = SND.MagIn, Dry = SND.Dry },
 	},
 	RocketLauncher = {
@@ -196,7 +196,7 @@ WeaponConfig.Weapons = {
 		Spread = { Hip = 0.6, Aim = 0, Move = 0.5, Bloom = 0, BloomMax = 0, BloomRecovery = 10 },
 		Recoil = { Pitch = 4, Yaw = 1, Kick = 1.6, Recovery = 4 },
 		WalkMultiplier = 0.9,
-		Viewmodel = { Scale = 0.36, Hip = CFrame.new(0.44, -0.52, -1.35) * CFrame.Angles(0, rad(4), rad(-2)), AimDistance = 0.7, AimFov = 60, AimSensitivity = 0.75, EquipTime = 0.7 },
+		Viewmodel = { Scale = 0.36, Hip = CFrame.new(0.4048, -0.468, -1.08) * CFrame.Angles(0, rad(4), rad(-2)), AimDistance = 0.7, AimFov = 60, AimSensitivity = 0.75, EquipTime = 0.7 },
 		Sounds = { Fire = SND.RocketFire, Reload = SND.MagIn, Equip = SND.MagIn, Loop = SND.RocketLoop, Dry = SND.Dry },
 	},
 	Grenade = {
@@ -218,7 +218,7 @@ WeaponConfig.Weapons = {
 		Spread = { Hip = 0, Aim = 0, Move = 0, Bloom = 0, BloomMax = 0, BloomRecovery = 10 },
 		Recoil = { Pitch = 0, Yaw = 0, Kick = 0, Recovery = 10 },
 		WalkMultiplier = 1.05,
-		Viewmodel = { Scale = 0.34, Hip = CFrame.new(0.44, -0.48, -1.1) * CFrame.Angles(rad(10), rad(-15), 0), EquipTime = 0.3 },
+		Viewmodel = { Scale = 0.34, Hip = CFrame.new(0.4048, -0.432, -0.88) * CFrame.Angles(rad(10), rad(-15), 0), EquipTime = 0.3 },
 		Sounds = { Fire = SND.Swing, Equip = SND.GrenadePin },
 	},
 	Sledgehammer = {
@@ -234,7 +234,7 @@ WeaponConfig.Weapons = {
 		Spread = { Hip = 0, Aim = 0, Move = 0, Bloom = 0, BloomMax = 0, BloomRecovery = 10 },
 		Recoil = { Pitch = 0, Yaw = 0, Kick = 0, Recovery = 10 },
 		WalkMultiplier = 1.08,
-		Viewmodel = { Scale = 0.34, Hip = CFrame.new(0.62, -0.85, -1.1) * CFrame.Angles(rad(-50), rad(-10), rad(25)), EquipTime = 0.35 },
+		Viewmodel = { Scale = 0.34, Hip = CFrame.new(0.5704, -0.765, -0.88) * CFrame.Angles(rad(-50), rad(-10), rad(25)), EquipTime = 0.35 },
 		Sounds = { Fire = SND.Swing, Equip = SND.Swing },
 	},
 }
