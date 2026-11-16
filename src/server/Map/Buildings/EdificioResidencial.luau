@@ -22,7 +22,7 @@ local BuildingKit = require(script.Parent.Parent.BuildingKit)
 local Res = {}
 
 local S = 34
-local FH = 9
+local FH = 11
 local COLS = { 0, 11, 22, 32 }
 local MARGIN = 3
 local RC = "ReinforcedConcrete"

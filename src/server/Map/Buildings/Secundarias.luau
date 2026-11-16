@@ -56,9 +56,9 @@ end
 ---------------------------------------------------------------------------
 function Sec.centroComercial()
 	local W, D = 44, 32
-	local b = BuildingKit.new(W + 6, 26, D + 8, Vector3.new(3, 0, 5))
+	local b = BuildingKit.new(W + 6, 32, D + 8, Vector3.new(3, 0, 5))
 	b:add("Foundation", RC, -1, 0, -4, W, 0, D, "Fundacao")
-	local cxs, czs, levels = { 0, 14, 28, 42 }, { 0, 15, 30 }, { 0, 8, 16 }
+	local cxs, czs, levels = { 0, 14, 28, 42 }, { 0, 15, 30 }, { 0, 10, 20 }
 	frame(b, cxs, czs, levels)
 	b:stairCore(30, 8, levels, { Name = "Nucleo" })
 	for f = 0, 1 do
@@ -95,9 +95,9 @@ function Sec.centroComercial()
 	end
 	-- marquise contínua sobre as vitrines e letreiro na platibanda
 	b:add("Slab", RC, 0, levels[2] - 1, -3, W - 1, levels[2] - 1, -1, "Marquise")
-	b:add("Wall", "Concrete", 0, 17, 0, W - 1, 18, 0, "Platibanda_F")
-	b:add("Wall", "Concrete", 0, 17, D - 1, W - 1, 18, D - 1, "Platibanda_T")
-	b:add("Prop", "DarkMetal", 12, 19, 0, 31, 21, 0, "Letreiro")
+	b:add("Wall", "Concrete", 0, 21, 0, W - 1, 22, 0, "Platibanda_F")
+	b:add("Wall", "Concrete", 0, 21, D - 1, W - 1, 22, D - 1, "Platibanda_T")
+	b:add("Prop", "DarkMetal", 12, 23, 0, 31, 25, 0, "Letreiro")
 	return b:finish()
 end
 

@@ -29,7 +29,7 @@ local ANNEX = { x0 = 76, x1 = 105, z0 = 28, z1 = 55, floors = 4 } -- anexo de es
 local RC = "ReinforcedConcrete"
 
 function Ind.build()
-	local b = BuildingKit.new(ANNEX.x1 + 2 + MARGIN * 2, H + 12, HZ + MARGIN * 2, Vector3.new(MARGIN, 0, MARGIN))
+	local b = BuildingKit.new(ANNEX.x1 + 2 + MARGIN * 2, 52, HZ + MARGIN * 2, Vector3.new(MARGIN, 0, MARGIN))
 
 	b:add("Foundation", RC, -1, 0, -1, ANNEX.x1 + 1, 0, HZ, "Fundacao")
 
@@ -130,7 +130,7 @@ function Ind.build()
 	-- Anexo de escritórios (4 andares, concreto, colado à face leste)
 	---------------------------------------------------------------------
 	local a = ANNEX
-	local AH = 8
+	local AH = 10
 	local levels = {}
 	for k = 0, a.floors do
 		table.insert(levels, k * AH)

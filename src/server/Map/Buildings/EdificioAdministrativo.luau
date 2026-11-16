@@ -26,7 +26,7 @@ local Admin = {}
 
 local W, D = 36, 80
 local FLOORS = 6
-local FH = 9
+local FH = 11
 local COLS_X = { 0, 12, 22, 34 }
 local COLS_Z = { 0, 10, 20, 30, 40, 50, 60, 70, 78 }
 local ATRIUM = { x0 = 14, x1 = 21, z0 = 22, z1 = 57 } -- vazio central (entre linhas 12 e 22 / 20 e 60)

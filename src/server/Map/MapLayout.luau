@@ -367,8 +367,7 @@ local function buildPeriphery(ctx)
 	rubblePile(ctx, 332, -50, 6, 10, 32)
 
 	-- ambiente: árvores, arbustos e rochas (campos, cume e subúrbio)
-	scatter(ctx, "EnvironmentalProps", { -320, -330, 300, -140 }, 34, 41, WorldProps.tree)
-	scatter(ctx, "EnvironmentalProps", { 330, -330, 470, -60 }, 10, 42, WorldProps.tree)
+	-- V11: sem árvores (pedido do Lucas); ficam arbustos baixos e rochas
 	scatter(ctx, "EnvironmentalProps", { -320, -330, 470, -140 }, 50, 43, WorldProps.bush)
 	scatter(ctx, "EnvironmentalProps", { 110, -300, 330, -20 }, 26, 44, function(f, cf, sd)
 		WorldProps.rock(f, cf, 2 + (sd % 3), sd)

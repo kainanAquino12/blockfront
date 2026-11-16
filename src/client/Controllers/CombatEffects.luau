@@ -56,41 +56,139 @@ local function newEffectPart(): Part
 	return p
 end
 
-function CombatEffects.muzzleFlash(position: Vector3, scale: number?)
+--[[
+	V11: tiros com cara de tiro.
+	  - Clarão do cano: núcleo + "pétalas" alinhadas ao disparo + fumaça
+	    que sobe e some (antes era um cubinho amarelo por 1 quadro).
+	  - Traçante VIAJANDO: uma risca curta e brilhante que sai do cano e
+	    voa até o ponto de impacto a ~900 studs/s (antes era uma linha
+	    parada de 60 studs que piscava).
+	  - Impacto: poeira na cor do material + faísca rápida.
+]]
+local TweenService = game:GetService("TweenService")
+local RunService = game:GetService("RunService")
+
+local TRACER_SPEED = 900
+local TRACER_LEN = 7
+local flying: { { part: Part, from: Vector3, dir: Vector3, dist: number, t: number } } = {}
+
+local function fade(p: BasePart, time: number, goal: { [string]: any })
+	local tw = TweenService:Create(p, TweenInfo.new(time, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), goal)
+	tw:Play()
+	Debris:AddItem(p, time + 0.05)
+end
+
+function CombatEffects.muzzleFlash(position: Vector3, scale: number?, direction: Vector3?)
 	local s = scale or 1
-	local p = newEffectPart()
-	p.Size = Vector3.new(0.35, 0.35, 0.35) * s
-	p.Color = Color3.fromRGB(255, 214, 110)
-	p.CFrame = CFrame.new(position) * CFrame.Angles(rng:NextNumber(0, 3), rng:NextNumber(0, 3), 0)
+	local dir = if direction and direction.Magnitude > 1e-3 then direction.Unit else workspace.CurrentCamera.CFrame.LookVector
+	local base = CFrame.lookAt(position, position + dir) * CFrame.Angles(0, 0, rng:NextNumber(0, math.pi))
+	local core = newEffectPart()
+	core.Size = Vector3.new(0.22, 0.22, 0.22) * s
+	core.Color = Color3.fromRGB(255, 236, 170)
+	core.CFrame = base
 	local light = Instance.new("PointLight")
-	light.Color = p.Color
-	light.Range = 9 * s
-	light.Brightness = 3
-	light.Parent = p
-	p.Parent = effectsFolder
-	Debris:AddItem(p, 0.045)
+	light.Color = Color3.fromRGB(255, 190, 110)
+	light.Range = 12 * s
+	light.Brightness = 4
+	light.Shadows = false
+	light.Parent = core
+	core.Parent = effectsFolder
+	Debris:AddItem(core, 0.05)
+	-- chama para frente + duas pétalas cruzadas
+	local flame = newEffectPart()
+	flame.Size = Vector3.new(0.14, 0.14, rng:NextNumber(0.6, 0.95)) * s
+	flame.Color = Color3.fromRGB(255, 196, 90)
+	flame.CFrame = base * CFrame.new(0, 0, -flame.Size.Z / 2)
+	flame.Parent = effectsFolder
+	Debris:AddItem(flame, 0.04)
+	for k = 0, 1 do
+		local petal = newEffectPart()
+		petal.Size = Vector3.new(0.32 * s, 0.035 * s, 0.035 * s)
+		petal.Color = Color3.fromRGB(255, 170, 70)
+		petal.CFrame = base * CFrame.new(0, 0, -0.15 * s) * CFrame.Angles(0, 0, k * math.pi / 2)
+		petal.Parent = effectsFolder
+		Debris:AddItem(petal, 0.035)
+	end
+	-- fumaça
+	local smoke = newEffectPart()
+	smoke.Material = Enum.Material.SmoothPlastic
+	smoke.Color = Color3.fromRGB(170, 168, 160)
+	smoke.Shape = Enum.PartType.Ball
+	smoke.Transparency = 0.78
+	smoke.Size = Vector3.one * 0.15 * s
+	smoke.CFrame = base * CFrame.new(0, 0, -0.3 * s)
+	smoke.Parent = effectsFolder
+	fade(smoke, 0.35, { Size = Vector3.one * 0.45 * s, Transparency = 1, CFrame = smoke.CFrame + Vector3.new(0, 0.35, 0) + dir * 0.4 })
 end
 
 local function tracer(from: Vector3, to: Vector3)
-	local p = table.remove(tracerPool) or newEffectPart()
-	local len = (to - from).Magnitude
-	if len < 0.5 then
+	local d = to - from
+	local dist = d.Magnitude
+	if dist < 2 then
 		return
 	end
-	p.Size = Vector3.new(0.07, 0.07, math.min(len, 60))
-	p.Color = Color3.fromRGB(255, 226, 120)
-	p.Transparency = 0.15
-	-- traçante curto saindo do cano em direção ao alvo
-	p.CFrame = CFrame.lookAt(from, to) * CFrame.new(0, 0, -math.min(len, 60) / 2)
+	local p = table.remove(tracerPool) or newEffectPart()
+	p.Size = Vector3.new(0.05, 0.05, TRACER_LEN)
+	p.Color = Color3.fromRGB(255, 214, 130)
+	p.Transparency = 0.1
 	p.Parent = effectsFolder
-	task.delay(TRACER_TIME, function()
-		p.Parent = nil
-		if #tracerPool < TRACER_POOL_SIZE then
-			table.insert(tracerPool, p)
+	table.insert(flying, { part = p, from = from, dir = d / dist, dist = dist, t = 0 })
+end
+
+local function updateTracers(dt: number)
+	local i = 1
+	while i <= #flying do
+		local f = flying[i]
+		f.t += dt
+		local head = math.min(f.t * TRACER_SPEED, f.dist)
+		local tail = math.max(head - TRACER_LEN, 0)
+		if tail >= f.dist - 0.05 then
+			f.part.Parent = nil
+			if #tracerPool < TRACER_POOL_SIZE then
+				table.insert(tracerPool, f.part)
+			else
+				f.part:Destroy()
+			end
+			flying[i] = flying[#flying]
+			flying[#flying] = nil
 		else
-			p:Destroy()
+			local a = f.from + f.dir * tail
+			local b = f.from + f.dir * head
+			local len = math.max((b - a).Magnitude, 0.05)
+			f.part.Size = Vector3.new(0.05, 0.05, len)
+			f.part.CFrame = CFrame.lookAt((a + b) / 2, b)
+			i += 1
 		end
-	end)
+	end
+end
+
+-- Poeira e faísca no ponto de impacto.
+local DUST = {
+	Concrete = Color3.fromRGB(176, 172, 164),
+	Wood = Color3.fromRGB(150, 116, 80),
+	Metal = Color3.fromRGB(150, 150, 150),
+	Glass = Color3.fromRGB(200, 220, 230),
+	Dirt = Color3.fromRGB(120, 104, 80),
+	Body = Color3.fromRGB(120, 20, 20),
+}
+local function impactPuff(position: Vector3, class: string, normal: Vector3)
+	local dust = newEffectPart()
+	dust.Material = Enum.Material.SmoothPlastic
+	dust.Color = DUST[class] or DUST.Concrete
+	dust.Shape = Enum.PartType.Ball
+	dust.Transparency = 0.45
+	dust.Size = Vector3.one * 0.3
+	dust.CFrame = CFrame.new(position + normal * 0.15)
+	dust.Parent = effectsFolder
+	fade(dust, 0.4, { Size = Vector3.one * 1.4, Transparency = 1, CFrame = CFrame.new(position + normal * 0.7) })
+	if class == "Metal" or class == "Concrete" then
+		local spark = newEffectPart()
+		spark.Color = Color3.fromRGB(255, 220, 140)
+		spark.Size = Vector3.one * 0.14
+		spark.CFrame = CFrame.new(position + normal * 0.05)
+		spark.Parent = effectsFolder
+		Debris:AddItem(spark, 0.04)
+	end
 end
 
 -- Impacto num ponto: som pelo material + fragmentos.
@@ -107,6 +205,7 @@ function CombatEffects.impact(position: Vector3, materialName: string?, normal: 
 	})
 	local frag = FRAG[class]
 	local n = normal or Vector3.yAxis
+	impactPuff(position, class, n)
 	for _ = 1, (if class == "Body" then 3 else 2) do
 		local v = (n + rng:NextUnitVector() * 0.6).Unit * rng:NextNumber(8, 18) + Vector3.new(0, 6, 0)
 		DestructionEffects.spawnFragment(position + n * 0.2, frag[1], frag[2], rng:NextNumber(0.12, 0.25), v)
@@ -132,7 +231,7 @@ function CombatEffects.playShot(weapon, from: Vector3, hits, isLocal: boolean?)
 		tracer(from, h.Position)
 		CombatEffects.impact(h.Position, h.Material, h.Normal)
 	end
-	CombatEffects.muzzleFlash(from, if weapon.Pellets then 1.5 else 1)
+	CombatEffects.muzzleFlash(from, if weapon.Pellets then 1.5 else 1, hits[1] and (hits[1].Position - from))
 	AudioController.play(weapon.Sounds.Fire, if isLocal then nil else from, {
 		Category = "Shot",
 		Volume = if isLocal then 0.75 else 1,
@@ -276,6 +375,7 @@ function CombatEffects.init()
 	end
 	Remotes.get("CombatEvent").OnClientEvent:Connect(onCombatEvent)
 	RunService.RenderStepped:Connect(update)
+	RunService.RenderStepped:Connect(updateTracers)
 end
 
 return CombatEffects

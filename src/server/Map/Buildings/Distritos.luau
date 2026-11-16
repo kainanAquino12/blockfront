@@ -30,7 +30,7 @@ local RC = "ReinforcedConcrete"
 -- Planta: plataforma x 2..17, prédio x 20..43, comprimento z 0..95.
 ---------------------------------------------------------------------------
 function D.estacao()
-	local b = BuildingKit.new(48, 44, 100, Vector3.new(2, 0, 2))
+	local b = BuildingKit.new(48, 54, 100, Vector3.new(2, 0, 2))
 	b:add("Foundation", RC, -1, 0, -1, 45, 0, 96, "Fundacao")
 	b:add("Foundation", RC, 19, 1, 0, 45, 2, 95, "Embasamento") -- prédio no nível da plataforma
 	-- plataforma elevada (2) ao longo dos trilhos
@@ -51,37 +51,37 @@ function D.estacao()
 	-- prédio da estação: saguão de pé-direito duplo + alas de 2 andares
 	b.lightKind = "Industrial"
 	b:framedBlock({
-		Name = "Saguao", X = { 20, 32, 42 }, Z = { 30, 44, 58 }, Levels = { 2, 20 },
+		Name = "Saguao", X = { 20, 32, 42 }, Z = { 30, 44, 58 }, Levels = { 2, 24 },
 		Wall = "DarkBrick", Win = "Tall", Roof = true, RoofMaterial = "Stone",
 		Doors = { { face = "L", at = 40, w = 6 }, { face = "O", at = 40, w = 6 }, { face = "S", at = 23, w = 4 }, { face = "N", at = 23, w = 4 } },
 	})
 	b.lightKind = "Fluorescent"
 	for _, ala in { { z0 = 4, z1 = 30, n = "AlaSul" }, { z0 = 58, z1 = 84, n = "AlaNorte" } } do
 		b:framedBlock({
-			Name = ala.n, X = { 20, 32, 42 }, Z = { ala.z0, ala.z0 + 13, ala.z1 }, Levels = { 2, 11, 20 },
+			Name = ala.n, X = { 20, 32, 42 }, Z = { ala.z0, ala.z0 + 13, ala.z1 }, Levels = { 2, 13, 24 },
 			Wall = "Brick", Win = "Punched", Roof = true, RoofMaterial = "Stone",
 			SkipFaces = if ala.n == "AlaSul" then { N = true } else { S = true },
 			Doors = { { face = "O", at = ala.z0 + 6, w = 3 } },
 		})
 	end
 	-- escada na ala sul (até a cobertura da ala)
-	b:stairCore(33, 9, { 2, 11, 20 }, { Penthouse = 7, Name = "AlaSul_Nucleo" })
+	b:stairCore(33, 9, { 2, 13, 24 }, { Penthouse = 7, Name = "AlaSul_Nucleo" })
 	-- torre do relógio sobre o saguão (núcleo de escada vira a torre)
 	-- patamares dentro da torre (o saguão não tem laje nos níveis 11 e 29)
-	for _, y in { 11, 20, 29 } do
+	for _, y in { 13, 24, 35 } do
 		b:add("Slab", RC, 28, y, 38, 33, y, 41, ("Torre_Patamar_%d"):format(y))
 	end
-	b:stairCore(27, 37, { 2, 11, 20, 29 }, { Penthouse = 9, Name = "Torre", Material = "DarkBrick" })
-	b:carve(27, 31, 40, 27, 34, 46) -- janelas do campanário/relógio (posto de tiro)
-	b:carve(34, 31, 40, 34, 34, 46)
-	b:add("Prop", "Stone", 26, 36, 40, 26, 39, 47, "Relogio_O")
-	b:add("Prop", "Stone", 35, 36, 40, 35, 39, 47, "Relogio_L")
+	b:stairCore(27, 37, { 2, 13, 24, 35 }, { Penthouse = 9, Name = "Torre", Material = "DarkBrick" })
+	b:carve(27, 37, 40, 27, 40, 46) -- janelas do campanário/relógio (posto de tiro)
+	b:carve(34, 37, 40, 34, 40, 46)
+	b:add("Prop", "Stone", 26, 42, 40, 26, 45, 47, "Relogio_O")
+	b:add("Prop", "Stone", 35, 42, 40, 35, 45, 47, "Relogio_L")
 	-- bilheteria e bancos no saguão
 	b:add("Prop", "Wood", 22, 3, 46, 23, 4, 54, "Bilheteria")
 	b:add("Prop", "Wood", 30, 3, 34, 34, 3, 35, "Banco_Saguao_1")
 	b:add("Prop", "Wood", 30, 3, 52, 34, 3, 53, "Banco_Saguao_2")
 	-- marquise da entrada (lado da cidade)
-	b:add("Slab", RC, 43, 10, 38, 45, 10, 50, "Marquise")
+	b:add("Slab", RC, 43, 12, 38, 45, 12, 50, "Marquise")
 	return b:finish()
 end
 
@@ -90,9 +90,9 @@ end
 -- x 16..45, z 22..41. 4 andares (piso a piso 8).
 ---------------------------------------------------------------------------
 function D.hospital()
-	local b = BuildingKit.new(66, 46, 70, Vector3.new(2, 0, 3))
+	local b = BuildingKit.new(66, 56, 70, Vector3.new(2, 0, 3))
 	b:add("Foundation", RC, -1, 0, -3, 62, 0, 64, "Fundacao")
-	local L = { 0, 8, 16, 24, 32 }
+	local L = { 0, 10, 20, 30, 40 }
 	b:framedBlock({
 		Name = "AlaOeste", X = { 0, 14 }, Z = { 0, 11, 22, 33, 44, 55, 62 }, Levels = L,
 		Wall = "PaintedConcrete", Win = "Ribbon", Roof = true,
@@ -128,8 +128,8 @@ function D.hospital()
 	b:add("Beam", "Metal", 20, 7, -3, 41, 7, -2, "Marquise_Viga")
 	b:add("Slab", RC, 20, 7, -1, 41, 7, 21, "Marquise_Laje")
 	-- cruz vermelha (desbotada) na fachada sul do bloco central
-	b:add("Prop", "Brick", 29, 17, 22, 32, 22, 22, "Cruz_V")
-	b:add("Prop", "Brick", 27, 19, 22, 34, 20, 22, "Cruz_H")
+	b:add("Prop", "Brick", 29, 22, 22, 32, 27, 22, "Cruz_V")
+	b:add("Prop", "Brick", 27, 24, 22, 34, 25, 22, "Cruz_H")
 	-- heliponto na cobertura do centro: piso escuro com o "H"
 	local yr = L[5] + 1
 	b:add("Prop", "DarkMetal", 19, yr, 24, 41, yr, 38, "Heliponto")
@@ -226,9 +226,9 @@ end
 -- x 0..13, z 14..39 (L). 2 andares. Pátio cercado por muro com portão.
 ---------------------------------------------------------------------------
 function D.escola()
-	local b = BuildingKit.new(60, 22, 58, Vector3.new(2, 0, 2))
+	local b = BuildingKit.new(60, 30, 58, Vector3.new(2, 0, 2))
 	b:add("Foundation", RC, -1, 0, -1, 56, 0, 54, "Fundacao")
-	local L = { 0, 8, 16 }
+	local L = { 0, 10, 20 }
 	b:framedBlock({
 		Name = "Salas", X = { 0, 12, 24, 36, 46 }, Z = { 0, 12 }, Levels = L,
 		Wall = "Brick", Win = "Ribbon", Roof = true,
@@ -240,10 +240,10 @@ function D.escola()
 		Doors = { { face = "L", at = 30, w = 3 } },
 	})
 	b:carve(2, 1, 13, 11, 6, 15) -- liga as duas alas no térreo
-	b:carve(2, 9, 13, 11, 14, 15)
-	b:add("Slab", RC, 2, 8, 13, 11, 8, 13, "Ligacao_Laje")
+	b:carve(2, L[2] + 1, 13, 11, L[2] + 6, 15)
+	b:add("Slab", RC, 2, L[2], 13, 11, L[2], 13, "Ligacao_Laje")
 	-- núcleo entre as linhas de pilares 24 e 36 (não colide com nenhum pilar)
-	b:stairCore(26, 2, { 0, 8, 16 }, { Penthouse = 6, Name = "Nucleo" })
+	b:stairCore(26, 2, L, { Penthouse = 6, Name = "Nucleo" })
 	-- salas: carteiras viradas como barricadas
 	for _, x in { 3, 15, 38 } do
 		for f = 0, 1 do

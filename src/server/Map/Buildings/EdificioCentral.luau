@@ -31,7 +31,7 @@ local EdificioCentral = {}
 
 local W, D = 42, 30 -- planta (x, z)
 local FLOORS = 6 -- padrão; build({ Floors = n }) muda
-local FH = 9 -- piso a piso
+local FH = 11 -- piso a piso (V11: pé-direito livre de 10; antes 9 parecia rebaixado)
 local COLS_X = { 0, 10, 20, 30, 40 }
 local COLS_Z = { 0, 14, 28 }
 local MARGIN = 3
@@ -87,8 +87,6 @@ function EdificioCentral.build(opts: { Floors: number? }?)
 					("VigaZ_N%d_L%d_V%d"):format(k, i, j))
 			end
 		end
-		-- poço da escada (dentro do núcleo), mantém a faixa de patamar z 9..12
-		b:carve(CORE.x0 + 1, y - 1, CORE.z0 + 5, CORE.x1 - 1, y, CORE.z1 - 1)
 	end
 
 	-------------------------------------------------------------------------
@@ -113,41 +111,14 @@ function EdificioCentral.build(opts: { Floors: number? }?)
 	end
 
 	-------------------------------------------------------------------------
-	-- Núcleo de concreto (parede portante) + casa de escada na cobertura
+	-- Núcleo de concreto + escada em U até a casa de escada (BuildingKit:stairCore,
+	-- a mesma escada testada no Administrativo; acompanha qualquer pé-direito)
 	-------------------------------------------------------------------------
-	for f = 0, FLOORS do
-		local y0 = if f == 0 then 1 else L(f)
-		local y1 = if f == FLOORS then L(f) + 7 else L(f + 1) - 1
-		local name = ("Nucleo_A%d"):format(f)
-		local id = b:add("BearingWall", RC, CORE.x0, y0, CORE.z0, CORE.x0, y1, CORE.z1, name .. "_O")
-		b:add("BearingWall", RC, CORE.x1, y0, CORE.z0, CORE.x1, y1, CORE.z1, name .. "_L")
-		b:add("BearingWall", RC, CORE.x0, y0, CORE.z0, CORE.x1, y1, CORE.z0, name .. "_S")
-		b:add("BearingWall", RC, CORE.x0, y0, CORE.z1, CORE.x1, y1, CORE.z1, name .. "_N")
-		local _ = id
-		-- porta do núcleo para o corredor oeste (abre no patamar z 9..11)
-		local fy = if f == 0 then 1 else L(f) + 1
-		b:carve(CORE.x0, fy, CORE.z0 + 1, CORE.x0, fy + 6, CORE.z0 + 4)
+	local levels = {}
+	for k = 0, FLOORS do
+		table.insert(levels, L(k))
 	end
-	-- laje da casa de escada
-	b:add("Roof", RC, CORE.x0, L(FLOORS) + 8, CORE.z0, CORE.x1, L(FLOORS) + 8, CORE.z1, "CasaEscada_Teto")
-
-	-------------------------------------------------------------------------
-	-- Escadas em U (dentro do núcleo), uma por andar
-	-------------------------------------------------------------------------
-	for f = 0, FLOORS - 1 do
-		local y0 = L(f) + 1
-		local sid = b:add("Stair", RC, 23, y0, 12, 25, y0, 12, ("Escada_A%d"):format(f))
-		-- lance A: x 23..25, sobe indo para o norte (degraus de 2 de espessura)
-		for i = 0, 4 do
-			b:extend(sid, 23, math.max(y0 + i - 1, y0), 12 + i, 25, y0 + i, 12 + i)
-		end
-		-- patamar
-		b:extend(sid, 23, y0 + 3, 17, 28, y0 + 4, 20)
-		-- lance B: x 26..28, sobe voltando para o sul até a laje de cima
-		for i = 0, 3 do
-			b:extend(sid, 26, y0 + 4 + i, 16 - i, 28, y0 + 5 + i, 16 - i)
-		end
-	end
+	b:stairCore(CORE.x0, CORE.z0, levels, { Penthouse = 7, Name = "Nucleo" })
 
 	-- cornijas de pedra (nível 1 e cobertura); antes das fachadas para que
 	-- sacadas e marquise fiquem com as células onde se cruzam

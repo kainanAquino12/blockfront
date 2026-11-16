@@ -191,16 +191,16 @@ local function reloadPose(p: number): (CFrame, number, number)
 	local tilt = smooth(0, 0.15, p) * (1 - smooth(0.85, 1, p))
 	local slap = math.sin(smooth(0.8, 0.9, p) * math.pi) * (1 - smooth(0.9, 0.95, p))
 	local weaponCF = CFrame.new(-0.06 * tilt, -0.03 * tilt, 0.02 * tilt)
-		* CFrame.Angles(0.07 * tilt + 0.04 * slap, 0.08 * tilt, 0.32 * tilt)
+		* CFrame.Angles(0.05 * tilt + 0.03 * slap, 0.05 * tilt, 0.22 * tilt)
 	local drop
 	if p < 0.12 then
 		drop = 0
 	elseif p < 0.3 then
 		drop = smooth(0.12, 0.3, p) * 1.6
 	elseif p < 0.5 then
-		drop = 1.6 + smooth(0.3, 0.5, p) * 2.4
+		drop = 1.6 + smooth(0.3, 0.5, p) * 1.2
 	elseif p < 0.72 then
-		drop = 4 - smooth(0.5, 0.72, p) * 3.6
+		drop = 2.8 - smooth(0.5, 0.72, p) * 2.4
 	elseif p < 0.78 then
 		drop = 0.4 * (1 - smooth(0.72, 0.78, p))
 	else
@@ -514,10 +514,11 @@ local function render(dt: number)
 
 	-- Não atravessar paredes: recua e baixa a arma se o cano encostaria
 	wallParams.FilterDescendantsInstances = { character, folder }
-	local hit = workspace:Raycast(camCF.Position, camCF.LookVector * 2.4, wallParams)
-	local targetPush = if hit then math.clamp((2.4 - hit.Distance) / 2.0, 0, 1) else 0
+	local hit = workspace:Raycast(camCF.Position, camCF.LookVector * 1.7, wallParams)
+	local targetPush = if hit then math.clamp((1.7 - hit.Distance) / 1.4, 0, 1) else 0
 	wallPush = lerp(wallPush, targetPush, math.min(dt * 12, 1))
-	local wallCF = CFrame.new(0, -0.12 * wallPush, 0.55 * wallPush) * CFrame.Angles(math.rad(25) * wallPush, math.rad(20) * wallPush, 0)
+	-- perto da parede: recua reto (sem girar a arma, que deixava a mira torta)
+	local wallCF = CFrame.new(0, -0.06 * wallPush, 0.4 * wallPush) * CFrame.Angles(math.rad(8) * wallPush, 0, 0)
 
 	local equipCF = CFrame.new(0, -(1 - e) * 0.7, 0.1 * (1 - e)) * CFrame.Angles(-(1 - e) * 0.9, 0, (1 - e) * 0.3)
 	local reloadCF, magDrop, magHold = CFrame.identity, 0, 0
@@ -615,8 +616,8 @@ local function render(dt: number)
 			local mag = animated.Mag[1].part
 			local magCF = CFrame.new(mag.Position - final.UpVector * 0.02) * final.Rotation * CFrame.Angles(0, 0, -0.3)
 			local d = (magCF.Position - handLCF.Position)
-			if d.Magnitude > 0.75 then
-				magCF = CFrame.new(handLCF.Position + d.Unit * 0.75) * magCF.Rotation
+			if d.Magnitude > 0.5 then
+				magCF = CFrame.new(handLCF.Position + d.Unit * 0.5) * magCF.Rotation
 			end
 			handLCF = handLCF:Lerp(magCF, magHold)
 		elseif reloading then

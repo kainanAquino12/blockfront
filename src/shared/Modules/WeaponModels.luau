@@ -20,10 +20,10 @@
 local WeaponModels = {}
 
 local C = {
-	Black = Color3.fromRGB(22, 23, 27),
-	Dark = Color3.fromRGB(40, 42, 48),
-	Gray = Color3.fromRGB(70, 74, 84),
-	Light = Color3.fromRGB(104, 110, 122),
+	Black = Color3.fromRGB(26, 26, 27),
+	Dark = Color3.fromRGB(44, 44, 46), -- grafite (antes azulado)
+	Gray = Color3.fromRGB(70, 70, 70),
+	Light = Color3.fromRGB(112, 112, 108),
 	Tan = Color3.fromRGB(198, 172, 124),
 	TanDark = Color3.fromRGB(160, 136, 94),
 	Olive = Color3.fromRGB(98, 118, 62),
@@ -287,7 +287,13 @@ local function newPart(size: Vector3, color: Color3, material: Enum.Material?): 
 	local p = Instance.new("Part")
 	p.Size = size
 	p.Color = color
-	p.Material = material or Enum.Material.SmoothPlastic
+	if not material then
+		-- V11: aço oxidado nas peças escuras (receptor, cano, trilhos), polímero
+		-- fosco nas claras (guarda-mão, coronha, cores de destaque)
+		local lum = color.R * 0.3 + color.G * 0.59 + color.B * 0.11
+		material = if lum < 0.32 then Enum.Material.Metal else Enum.Material.SmoothPlastic
+	end
+	p.Material = material
 	p.TopSurface = Enum.SurfaceType.Smooth
 	p.BottomSurface = Enum.SurfaceType.Smooth
 	p.CanCollide = false

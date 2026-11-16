@@ -21,7 +21,7 @@ local QG = {}
 
 local S = 56 -- planta quadrada: 0..55
 local FH = 8
-local LEVELS = { 0, 8, 16 }
+local LEVELS = { 0, 10, 20 }
 local MARGIN = 2
 local WALLS = { 0, 16, 38, 54 } -- linhas de parede (2 de espessura) em x e em z
 local RC = "ReinforcedConcrete"

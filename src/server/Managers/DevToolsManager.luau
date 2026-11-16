@@ -181,7 +181,9 @@ function DevToolsManager.init()
 	bf.OnInvoke = devStructure
 	bf.Parent = game:GetService("ServerStorage")
 	Remotes.get("DevExplosionRequest").OnServerEvent:Connect(onRequest)
-	spawnDummies()
+	-- V11: bonecos de treino desligados (pedido do Lucas). Para testar mira,
+	-- chame spawnDummies() aqui de novo.
+	local _ = spawnDummies
 	Players.PlayerRemoving:Connect(function(p)
 		lastRequest[p] = nil
 	end)

@@ -175,6 +175,8 @@ function StructuralGraph.new(grid, defs: { ElementDef }, elementOf: buffer)
 					w = 1
 				elseif not A.Structural and B.Structural then
 					w = 1 -- vedação/acabamento presa na lateral de um estrutural
+				elseif k.side and (A.Type == "Glass" or A.Type == "Wall") and (B.Type == "Glass" or B.Type == "Wall") then
+					w = 1 -- vidro no caixilho / caixilho no vidro: presos lateralmente na fachada
 				elseif k.side and (A.Type == "Beam" or A.Type == "Slab")
 					and (B.Type == "Column" or B.Type == "BearingWall" or B.Type == "Beam" or B.Type == "Foundation") then
 					w = 1

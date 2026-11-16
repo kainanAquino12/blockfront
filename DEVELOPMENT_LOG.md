@@ -163,3 +163,13 @@ Mapa (`TerrainGen.HalfX` 480 -> 640)
 
 Testes (Studio, Play Solo): 0 elementos sem apoio; subida da torre da igreja com teclado (y 10 -> 36); colapso de
 4 pilares do hospital (83 de 778 elementos, servidor médio 16,7 ms, pior 20 ms); ~26,6 mil Parts; Output limpo.
+
+
+## 2026-11-16 — V11: ajustes de jogo
+
+- Tiros: traçante que viaja (900 studs/s), clarão com chama/pétalas/fumaça, poeira e faísca no impacto (CombatEffects).
+- Pé-direito 9 -> 11 em todos os prédios (Central/Torres, Administrativo, Residencial, QG, centro comercial, anexo industrial, estação, hospital, escola); Edifício Central usa stairCore.
+- StructuralGraph: vidro/caixilho presos lateralmente na fachada.
+- Árvores e bonecos de treino removidos; arma mais perto (z x0.82) e sem inclinação; perto da parede a arma recua reta.
+- Armas: paleta grafite neutra e aço (Metal) nas peças escuras. Loja: nenhum modelo de arma voxel adequado encontrado.
+- Recarga mais contida.
