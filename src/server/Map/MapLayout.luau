@@ -35,6 +35,7 @@ local Residencial = require(script.Parent.Buildings.EdificioResidencial)
 local Porto = require(script.Parent.Buildings.Porto)
 local Sec = require(script.Parent.Buildings.Secundarias)
 local WorldProps = require(script.Parent.WorldProps)
+local Distritos = require(script.Parent.Buildings.Distritos)
 
 ---------------------------------------------------------------------------
 -- Entulho estático (clima de combate): blocos de concreto e tijolo caídos.
@@ -226,6 +227,14 @@ end
 -- Tudo no referencial azul (z < 0); o MapManager espelha para o vermelho.
 ---------------------------------------------------------------------------
 
+local function PropHedge(ctx, list)
+	local PK = require(script.Parent.PropKit)
+	local f = WorldProps.folder(ctx.static, "MilitaryProps")
+	for _, h in list do
+		PK.hedgehog(f, ctx.cf(h[1], math.floor(TerrainGen.height(h[1], h[2]) + 0.5), h[2], h[1] % 45))
+	end
+end
+
 local function gy(x: number, z: number): number
 	return math.floor(TerrainGen.height(x, z) + 0.5)
 end
@@ -235,6 +244,7 @@ local NO_PLANT = {
 	{ -104, -236, -78, -214 }, -- celeiro
 	{ 140, -110, 165, -80 }, { 278, -145, 302, -115 }, -- torres
 	{ 195, -90, 275, -60 }, -- bunkers
+	{ 418, -142, 460, -100 }, { 356, -196, 390, -166 }, -- apartamentos e oficina do subúrbio
 }
 local function freeSpot(x: number, z: number): boolean
 	local _, kind = TerrainGen.sample(x, z)
@@ -368,8 +378,26 @@ local function buildPeriphery(ctx)
 	end)
 end
 
+---------------------------------------------------------------------------
+-- V10: distritos novos de cada lado (igreja em ruínas e escola-posto)
+---------------------------------------------------------------------------
+
+local function buildDistricts(ctx)
+	-- igreja em ruínas no subúrbio, portal voltado para o centro (norte no lado azul)
+	ctx.struct("Suburbio_Igreja", 414 - 2, -300, BuildingKit.flipZ(Distritos.igreja()), 5)
+	rubblePile(ctx, 424, -262, 7, 16, 51) -- telhado que caiu para fora
+	ctx.yield()
+	-- escola transformada em posto de comando, nos campos a oeste
+	ctx.struct("Campo_Escola", -330 - 2, -270 - 2, Distritos.escola(), 4)
+	local mil = WorldProps.folder(ctx.static, "MilitaryProps")
+	WorldProps.wreckTruck(mil, ctx.cf(-262, gy(-262, -226), -226, 70))
+	PropHedge(ctx, { { -280, -200 }, { -290, -204 }, { -300, -200 } })
+end
+
 function MapLayout.buildSide(ctx)
 	buildTower(ctx)
+	ctx.yield()
+	buildDistricts(ctx)
 	ctx.yield()
 	buildExpansion(ctx)
 	ctx.yield()
@@ -402,6 +430,22 @@ function MapLayout.buildCenter(ctx)
 	ctx.yield()
 	-- V6: porto (armazém, pórtico de carga e silos) além do canal
 	ctx.struct("Porto", -478 - Porto.Margin, -80 - Porto.Margin, Porto.build(), 1)
+	ctx.yield()
+	-- V10: estação ferroviária no extremo oeste, trilhos de ponta a ponta
+	ctx.struct("Ferrovia_Estacao", -600 - 2, -48 - 2, Distritos.estacao(), 1)
+	local ind = WorldProps.folder(ctx.static, "IndustrialProps")
+	for _, x in { -613, -605 } do
+		WorldProps.railTrack(ind, x, 1, -436, 436)
+	end
+	for k, w in { { -613, -150, "Box" }, { -613, -126, "Flat" }, { -605, 120, "Box" }, { -605, 144, "Flat" }, { -613, 300, "Box" }, { -605, -300, "Flat" } } do
+		WorldProps.wagon(ind, CFrame.new(w[1], 1.5, w[2]), w[3], 90 + k)
+	end
+	ctx.yield()
+	-- V10: hospital de campanha no extremo leste (ala atingida pegando fogo)
+	ctx.struct("Suburbio_Hospital", 560 - 2, -31 - 3, Distritos.hospital(), 6)
+	local ruins = WorldProps.folder(ctx.static, "RuinsAndDebris")
+	WorldProps.fire(ruins, Vector3.new(613, 32, -22), 7)
+	WorldProps.fire(ruins, Vector3.new(-95, 40, 12), 6) -- prédio abandonado (laje exposta do 4º andar)
 	ctx.yield()
 	-- C: QG Militar no topo do cume (pátio centrado em x ~234, z ~0)
 	ctx.struct("QGMilitar", 206 - QGMilitar.Margin, -28 - QGMilitar.Margin, QGMilitar.build(), TerrainGen.RidgeHeight)

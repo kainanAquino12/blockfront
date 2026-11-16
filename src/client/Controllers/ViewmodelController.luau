@@ -42,13 +42,14 @@ local WeaponModels = require(ReplicatedStorage.Shared.Modules.WeaponModels)
 local CameraController = require(script.Parent.CameraController)
 local MovementController = require(script.Parent.MovementController)
 local AimController = require(script.Parent.AimController)
+local AudioController = require(script.Parent.AudioController)
 
 local player = Players.LocalPlayer
 
 local ViewmodelController = {}
 
-local GLOVE = Color3.fromRGB(34, 35, 37)
-local GLOVE_PAD = Color3.fromRGB(52, 54, 57)
+local GLOVE = Color3.fromRGB(62, 64, 58) -- cinza-oliva: contrasta com a arma escura
+local GLOVE_PAD = Color3.fromRGB(88, 90, 82)
 local SKIN = Color3.fromRGB(198, 142, 108)
 local UNIFORM = Color3.fromRGB(112, 114, 92) -- manga camuflada (igual para os dois times)
 local UNIFORM_DARK = Color3.fromRGB(92, 94, 76)
@@ -69,7 +70,10 @@ local ARM = {
 	ForeWidth = 0.2, -- manga do antebraço (perto do cotovelo); afina até o punho
 	CuffWidth = 0.185,
 	BandWidth = 0.24,
-	HandScale = 1.55, -- mãos proporcionais ao antebraço grosso
+	-- empunhadura do rifle no modelo: centro (0, -0.05, 0.05), inclinada -18° em X
+	GripOffset = Vector3.new(0, -0.05, 0.05),
+	GripTilt = math.rad(-18),
+	HandguardHalf = 0.19, -- meia altura do guarda-mão (unidades do modelo)
 }
 
 --[[
@@ -85,43 +89,44 @@ local ARM = {
 	  palma por baixo do guarda-mão, polegar no lado esquerdo, 4 dedos
 	  subindo pelo lado direito com as pontas por cima.
 ]]
-local function fingerR(y: number, z: number, curl: number): { any }
-	-- falange (luva) atravessando a frente da empunhadura + ponta de pele no lado de dentro
-	return {
-		{ "Dedo", Vector3.new(0.088, 0.021, 0.024), CFrame.new(0.002, y, z) * CFrame.Angles(0, 0, curl), GLOVE },
-		{ "Ponta", Vector3.new(0.02, 0.019, 0.022), CFrame.new(-0.05, y - 0.004, z + 0.012), SKIN },
-	}
-end
+-- Peças da mão em studs FINAIS (sem escala), ajustadas às medidas reais do
+-- rifle no viewmodel (escala 0.36): empunhadura ~0.094 x 0.26 x 0.13 e
+-- guarda-mão ~0.13 x 0.137. O referencial da mão direita é o CENTRO DA
+-- EMPUNHADURA (já inclinado como ela); o da esquerda é o CENTRO DO GUARDA-MÃO.
+local WATCH = Color3.fromRGB(70, 74, 78)
 local HAND_R = {
-	{ "Dorso", Vector3.new(0.034, 0.1, 0.118), CFrame.new(0.046, 0.004, 0.006), GLOVE },
-	{ "Protecao", Vector3.new(0.012, 0.072, 0.07), CFrame.new(0.066, 0.012, 0.0), GLOVE_PAD },
-	{ "Palma", Vector3.new(0.03, 0.098, 0.1), CFrame.new(-0.036, 0.0, 0.012), GLOVE },
-	{ "Punho", Vector3.new(0.1, 0.094, 0.034), CFrame.new(0.004, -0.004, 0.072), GLOVE_PAD },
-	{ "Relogio", Vector3.new(0.024, 0.05, 0.03), CFrame.new(0.058, 0.0, 0.074), Color3.fromRGB(70, 74, 78) },
-	-- polegar: por cima do lado esquerdo, apontando para o cano
-	{ "Polegar", Vector3.new(0.024, 0.024, 0.06), CFrame.new(-0.05, 0.05, -0.03) * CFrame.Angles(0, math.rad(-8), 0), GLOVE },
-	{ "PolegarPonta", Vector3.new(0.022, 0.022, 0.024), CFrame.new(-0.054, 0.05, -0.07), SKIN },
-	-- indicador estendido no gatilho
-	{ "Indicador", Vector3.new(0.022, 0.022, 0.062), CFrame.new(-0.028, 0.044, -0.052), GLOVE },
-	{ "IndicadorPonta", Vector3.new(0.021, 0.021, 0.024), CFrame.new(-0.028, 0.044, -0.094), SKIN },
+	{ "Dorso", Vector3.new(0.034, 0.13, 0.15), CFrame.new(0.066, 0.0, 0.012), GLOVE },
+	{ "Protecao", Vector3.new(0.012, 0.085, 0.09), CFrame.new(0.088, 0.01, 0.0), GLOVE_PAD },
+	{ "Palma", Vector3.new(0.03, 0.12, 0.13), CFrame.new(-0.062, 0.0, 0.018), GLOVE },
+	{ "Junta", Vector3.new(0.13, 0.035, 0.05), CFrame.new(0.0, 0.072, 0.06), GLOVE },
+	{ "Punho", Vector3.new(0.12, 0.12, 0.05), CFrame.new(0.005, 0.035, 0.1), GLOVE_PAD },
+	{ "Relogio", Vector3.new(0.03, 0.06, 0.04), CFrame.new(0.072, 0.035, 0.1), WATCH },
+	-- polegar por cima, no lado esquerdo da arma
+	{ "Polegar", Vector3.new(0.03, 0.03, 0.1), CFrame.new(-0.062, 0.078, -0.02), GLOVE },
+	{ "PolegarPonta", Vector3.new(0.028, 0.028, 0.03), CFrame.new(-0.062, 0.078, -0.085), SKIN },
+	-- indicador ao longo do guarda-mato, ponta dobrada no gatilho
+	{ "Indicador", Vector3.new(0.028, 0.028, 0.075), CFrame.new(-0.036, 0.088, -0.075), GLOVE },
+	{ "IndicadorPonta", Vector3.new(0.034, 0.026, 0.026), CFrame.new(-0.018, 0.086, -0.118), SKIN },
 }
-for i, y in { 0.018, -0.008, -0.034 } do
-	for _, piece in fingerR(y, -0.058, math.rad(-4 + i * 3)) do
-		table.insert(HAND_R, piece)
-	end
+for _, y in { 0.035, 0.0, -0.035 } do
+	-- médio, anelar e mínimo: dão a volta pela frente da empunhadura
+	table.insert(HAND_R, { "Dedo", Vector3.new(0.12, 0.03, 0.032), CFrame.new(0.0, y, -0.082), GLOVE })
+	table.insert(HAND_R, { "Ponta", Vector3.new(0.03, 0.028, 0.03), CFrame.new(-0.068, y, -0.07), SKIN })
 end
 
 local HAND_L = {
-	{ "Palma", Vector3.new(0.104, 0.03, 0.118), CFrame.new(0.004, -0.06, 0.0), GLOVE },
-	{ "Dorso", Vector3.new(0.03, 0.08, 0.11), CFrame.new(-0.058, -0.03, 0.004), GLOVE },
-	{ "Protecao", Vector3.new(0.012, 0.06, 0.07), CFrame.new(-0.078, -0.028, 0.0), GLOVE_PAD },
-	{ "Punho", Vector3.new(0.092, 0.088, 0.034), CFrame.new(-0.02, -0.07, 0.07), GLOVE_PAD },
-	{ "Polegar", Vector3.new(0.024, 0.024, 0.07), CFrame.new(-0.06, 0.02, -0.03), GLOVE },
-	{ "PolegarPonta", Vector3.new(0.022, 0.022, 0.024), CFrame.new(-0.06, 0.022, -0.075), SKIN },
+	-- dorso da luva virado para a câmera (lado esquerdo do guarda-mão)
+	{ "Dorso", Vector3.new(0.035, 0.12, 0.16), CFrame.new(-0.085, -0.01, 0.0), GLOVE },
+	{ "Protecao", Vector3.new(0.012, 0.08, 0.1), CFrame.new(-0.107, 0.0, 0.0), GLOVE_PAD },
+	{ "Palma", Vector3.new(0.1, 0.03, 0.15), CFrame.new(-0.03, -0.084, 0.0), GLOVE },
+	{ "Polegar", Vector3.new(0.03, 0.03, 0.1), CFrame.new(0.04, -0.084, -0.06), GLOVE },
+	{ "PolegarPonta", Vector3.new(0.028, 0.028, 0.03), CFrame.new(0.04, -0.084, -0.12), SKIN },
+	{ "Punho", Vector3.new(0.115, 0.115, 0.05), CFrame.new(-0.06, -0.04, 0.1), GLOVE_PAD },
 }
-for i, z in { -0.042, -0.014, 0.014, 0.04 } do
-	table.insert(HAND_L, { "Dedo" .. i, Vector3.new(0.024, 0.074, 0.024), CFrame.new(0.06, -0.02, z), GLOVE })
-	table.insert(HAND_L, { "Ponta" .. i, Vector3.new(0.022, 0.022, 0.022), CFrame.new(0.05, 0.03, z) * CFrame.Angles(0, 0, math.rad(-35)), SKIN })
+for _, z in { -0.057, -0.019, 0.019, 0.057 } do
+	-- dedos passam por cima do guarda-mão; pontas (pele) do outro lado
+	table.insert(HAND_L, { "Dedo", Vector3.new(0.1, 0.03, 0.032), CFrame.new(-0.03, 0.084, z), GLOVE })
+	table.insert(HAND_L, { "Ponta", Vector3.new(0.03, 0.04, 0.03), CFrame.new(0.055, 0.07, z), SKIN })
 end
 
 -- Manchas da camuflagem (frações ao longo do segmento, lado e tamanho).
@@ -164,6 +169,49 @@ local hidden = false
 local function lerp(a: number, b: number, t: number): number
 	return a + (b - a) * t
 end
+
+local function smooth(e0: number, e1: number, x: number): number
+	local t = math.clamp((x - e0) / (e1 - e0), 0, 1)
+	return t * t * (3 - 2 * t)
+end
+
+--[[
+	Recarga com carregador (V10), p = 0..1 do ReloadTime:
+	  0.00-0.15  inclina a arma para a direita (mostra o poço do carregador)
+	  0.10-0.30  mão esquerda pega o carregador e puxa para baixo  (som MagOut)
+	  0.30-0.50  carregador e mão saem por baixo da tela
+	  0.50-0.72  volta com o carregador novo
+	  0.72-0.78  encaixa                                          (som MagIn)
+	  0.80-0.90  tapa na arma / ferrolho                          (som Charge)
+	  0.85-1.00  arma volta à posição
+	Devolve: deslocamento da arma, queda do carregador (unidades do modelo) e
+	quanto a mão esquerda está presa ao carregador (0..1).
+]]
+local function reloadPose(p: number): (CFrame, number, number)
+	local tilt = smooth(0, 0.15, p) * (1 - smooth(0.85, 1, p))
+	local slap = math.sin(smooth(0.8, 0.9, p) * math.pi) * (1 - smooth(0.9, 0.95, p))
+	local weaponCF = CFrame.new(-0.06 * tilt, -0.03 * tilt, 0.02 * tilt)
+		* CFrame.Angles(0.07 * tilt + 0.04 * slap, 0.08 * tilt, 0.32 * tilt)
+	local drop
+	if p < 0.12 then
+		drop = 0
+	elseif p < 0.3 then
+		drop = smooth(0.12, 0.3, p) * 1.6
+	elseif p < 0.5 then
+		drop = 1.6 + smooth(0.3, 0.5, p) * 2.4
+	elseif p < 0.72 then
+		drop = 4 - smooth(0.5, 0.72, p) * 3.6
+	elseif p < 0.78 then
+		drop = 0.4 * (1 - smooth(0.72, 0.78, p))
+	else
+		drop = 0
+	end
+	local onMag = smooth(0.06, 0.13, p) * (1 - smooth(0.78, 0.86, p))
+	return weaponCF, drop, onMag
+end
+
+local RELOAD_SOUNDS = { { 0.14, "MagOut" }, { 0.74, "MagIn" }, { 0.86, "Charge" } }
+local reloadSoundsFired: { [string]: boolean } = {}
 
 local function makeArmPart(name: string, color: Color3, size: Vector3): BasePart
 	local p = Instance.new("Part")
@@ -356,7 +404,7 @@ local function placeCamo(side: string, seg: string, a: Vector3, b: Vector3, widt
 end
 
 -- Ponto do punho de cada mão (onde o antebraço termina), no referencial da mão.
-local WRIST = { R = Vector3.new(0.006, -0.006, 0.1) * ARM.HandScale, L = Vector3.new(0.024, -0.072, 0.1) * ARM.HandScale }
+local WRIST = { R = Vector3.new(0.005, 0.04, 0.13), L = Vector3.new(-0.07, -0.05, 0.13) }
 
 local function placeArm(side: string, camCF: CFrame, handCF: CFrame)
 	local shoulder = camCF:PointToWorldSpace(ARM["Shoulder" .. side])
@@ -416,6 +464,20 @@ local function render(dt: number)
 	local reloading = tool ~= nil and tool:GetAttribute("Reloading") == true
 	if reloading and not wasReloading then
 		reloadStart = os.clock()
+		table.clear(reloadSoundsFired)
+	end
+	local reloadP = if reloading then math.clamp((os.clock() - reloadStart) / (weapon.ReloadTime or 1), 0, 1) else 1
+	local magReload = animated.Mag ~= nil and weapon.Sounds and weapon.Sounds.MagOut ~= nil
+	if reloading and magReload then
+		for _, ev in RELOAD_SOUNDS do
+			if reloadP >= ev[1] and not reloadSoundsFired[ev[2]] then
+				reloadSoundsFired[ev[2]] = true
+				local id = weapon.Sounds[ev[2]]
+				if id then
+					AudioController.play(id, nil, { Volume = 0.75, Vary = 0.04 })
+				end
+			end
+		end
 	end
 	wasReloading = reloading
 	reloadAlpha = lerp(reloadAlpha, if reloading then 1 else 0, math.min(dt * 9, 1))
@@ -458,7 +520,12 @@ local function render(dt: number)
 	local wallCF = CFrame.new(0, -0.12 * wallPush, 0.55 * wallPush) * CFrame.Angles(math.rad(25) * wallPush, math.rad(20) * wallPush, 0)
 
 	local equipCF = CFrame.new(0, -(1 - e) * 0.7, 0.1 * (1 - e)) * CFrame.Angles(-(1 - e) * 0.9, 0, (1 - e) * 0.3)
-	local reloadCF = CFrame.new(0, -reloadAlpha * 0.12, 0) * CFrame.Angles(-reloadAlpha * 0.25, reloadAlpha * 0.15, reloadAlpha * 0.5)
+	local reloadCF, magDrop, magHold = CFrame.identity, 0, 0
+	if magReload and reloading then
+		reloadCF, magDrop, magHold = reloadPose(reloadP)
+	else
+		reloadCF = CFrame.new(0, -reloadAlpha * 0.12, 0) * CFrame.Angles(-reloadAlpha * 0.25, reloadAlpha * 0.15, reloadAlpha * 0.5)
+	end
 
 	-- Bombeada / ferrolho: inclina a arma
 	local cycleCF = CFrame.identity
@@ -512,18 +579,15 @@ local function render(dt: number)
 
 	-- Peças animadas
 	if animated.Mag and reloading then
-		local p = math.clamp((os.clock() - reloadStart) / (weapon.ReloadTime or 1), 0, 1)
-		local drop: number
-		if p < 0.3 then
-			drop = (p / 0.3) * 1.6
-		elseif p < 0.6 then
-			drop = 3
-		elseif p < 0.85 then
-			drop = 1.6 * (1 - (p - 0.6) / 0.25)
+		if magReload then
+			offsetTagged("Mag", CFrame.new(0, -magDrop, magDrop * 0.12) * CFrame.Angles(magDrop * 0.12, 0, 0))
 		else
-			drop = 0
+			local p = reloadP
+			local drop = if p < 0.3 then (p / 0.3) * 1.6 elseif p < 0.6 then 3 elseif p < 0.85 then 1.6 * (1 - (p - 0.6) / 0.25) else 0
+			offsetTagged("Mag", CFrame.new(0, -drop, drop * 0.2))
 		end
-		offsetTagged("Mag", CFrame.new(0, -drop, drop * 0.2))
+	elseif animated.Mag then
+		offsetTagged("Mag", CFrame.identity)
 	end
 	if animated.Pump and pumpOffset > 0 then
 		offsetTagged("Pump", CFrame.new(0, 0, pumpOffset))
@@ -539,15 +603,25 @@ local function render(dt: number)
 
 	-- Braços: IK do ombro (fora da tela) até as mãos na arma
 	local sScale = vm.Scale
-	local handRCF = final * CFrame.new(0, -0.1 * sScale, 0.06 * sScale)
+	-- mão direita: centro da empunhadura, com a mesma inclinação dela
+	local handRCF = final * CFrame.new(ARM.GripOffset * sScale) * CFrame.Angles(ARM.GripTilt, 0, 0)
 	placeArm("R", camCF, handRCF)
 	local lh = handle:FindFirstChild("LeftHand") :: Attachment?
 	if lh then
-		local handLCF = CFrame.new(lh.WorldPosition) * final.Rotation
-		if reloading then
-			-- mão esquerda vai buscar o carregador
-			local p = math.clamp((os.clock() - reloadStart) / (weapon.ReloadTime or 1), 0, 1)
-			local away = math.sin(math.clamp((p - 0.15) / 0.7, 0, 1) * math.pi)
+		-- mão esquerda: centro do guarda-mão (o attachment fica na face de baixo)
+		local handLCF = CFrame.new(lh.WorldPosition + final.UpVector * ARM.HandguardHalf * sScale) * final.Rotation
+		if reloading and magReload and magHold > 0 then
+			-- segura o carregador (limita a descida para o braço não esticar demais)
+			local mag = animated.Mag[1].part
+			local magCF = CFrame.new(mag.Position - final.UpVector * 0.02) * final.Rotation * CFrame.Angles(0, 0, -0.3)
+			local d = (magCF.Position - handLCF.Position)
+			if d.Magnitude > 0.75 then
+				magCF = CFrame.new(handLCF.Position + d.Unit * 0.75) * magCF.Rotation
+			end
+			handLCF = handLCF:Lerp(magCF, magHold)
+		elseif reloading then
+			-- armas sem carregador: a mão sai e volta
+			local away = math.sin(math.clamp((reloadP - 0.15) / 0.7, 0, 1) * math.pi)
 			handLCF = handLCF * CFrame.new(0, -0.35 * away, 0.25 * away)
 		end
 		placeArm("L", camCF, handLCF)
@@ -578,17 +652,10 @@ function ViewmodelController.init()
 			end
 		end
 		for n, piece in (if side == "R" then HAND_R else HAND_L) do
-			local hs = ARM.HandScale
-			local p = makeArmPart(("Mao%s%d%s"):format(piece[1], n, side), piece[4], piece[2] * hs)
+			local p = makeArmPart(("Mao%s%d%s"):format(piece[1], n, side), piece[4], piece[2])
 			p.Material = Enum.Material.SmoothPlastic
 			arms[p.Name] = p
-			-- mão esquerda espelhada em X: dedos no lado visível (esquerdo) do guarda-mão
-			local rel = piece[3]
-			if side == "L" then
-				local rx, ry, rz = rel:ToOrientation()
-				rel = CFrame.new(-rel.X, rel.Y, rel.Z) * CFrame.fromOrientation(rx, -ry, -rz)
-			end
-			table.insert(handPieces[side], { part = p, rel = CFrame.new(rel.Position * hs) * rel.Rotation })
+			table.insert(handPieces[side], { part = p, rel = piece[3] })
 		end
 	end
 	RunService:BindToRenderStep("BlockfrontViewmodel", Enum.RenderPriority.Camera.Value + 1, render)

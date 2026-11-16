@@ -136,3 +136,30 @@ Servidor 16,7 ms com 22,3 mil Parts. Não testado: 2+ jogadores; percurso comple
 
 ViewmodelController: braços ~2x mais grossos (antebraço 0.2, braço 0.23), mais curtos, ombros abaixo da tela; manga camuflada (manchas que acompanham o IK) com punho dobrado; mãos com 5 dedos, luva tática sem dedos (pontas de pele), dorso/palma/punho/relógio, indicador no gatilho, mão esquerda sob o guarda-mão; arma 20% mais perto da câmera (WeaponConfig Hip). ADS conferido no rifle.
 
+
+
+## 2026-11-16 — V10: mapa 1280 x 880, mãos, recarga e sons
+
+Sons
+- Causa do atraso medida: cada tiro criava um Sound novo NÃO carregado (350 a 880 ms até tocar).
+  `AudioController` agora pré-carrega todos os sons (ContentProvider) e toca CLONES de modelos já carregados
+  (~16 ms). `AudioConfig.StartOffsets` pula o silêncio inicial (MagReload tinha 0,33 s).
+- Camada de estalo no rifle/LMG, cápsulas caindo (Pro Sound Effects), recarga em 3 sons (MagOut, MagIn, Charge)
+  disparados pela animação. Sons novos da Creator Store (gratuitos, áudio não tem scripts); evitados os que se
+  declaram copiados de jogos comerciais.
+- `AmbientBattleController`: combate distante (rajadas e explosões abafadas a 300-650 studs).
+
+Mãos e recarga (`ViewmodelController`)
+- Mão direita no centro da empunhadura, inclinada como ela; mão esquerda no centro do guarda-mão (antes flutuava
+  abaixo); peças em studs reais medidas no modelo; luvas cinza-oliva (contraste).
+- Recarga coreografada: inclina, mão esquerda pega o carregador, tira, busca outro, encaixa, tapa.
+
+Mapa (`TerrainGen.HalfX` 480 -> 640)
+- `BuildingKit:framedBlock` (bloco estrutural com fachada) e `stairCore` com material.
+- `Buildings/Distritos.luau`: Estação ferroviária (torre do relógio, plataforma coberta, trilhos de ponta a ponta e
+  vagões), Hospital em H (heliponto, emergência, ala bombardeada em chamas), Igreja em ruínas (torre sineira escalável,
+  telhado meio desabado) e Escola-posto de comando (sacos de areia, muro e portão).
+- Fogo nos prédios atingidos (`WorldProps.fire`).
+
+Testes (Studio, Play Solo): 0 elementos sem apoio; subida da torre da igreja com teclado (y 10 -> 36); colapso de
+4 pilares do hospital (83 de 778 elementos, servidor médio 16,7 ms, pior 20 ms); ~26,6 mil Parts; Output limpo.

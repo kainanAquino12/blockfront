@@ -185,7 +185,11 @@ local function requestReload()
 		return
 	end
 	reloadRemote:FireServer(weapon.Id)
-	AudioController.play(weapon.Sounds.Reload, nil, { Volume = 0.7 })
+	-- armas com carregador animado tocam MagOut/MagIn/Charge no ritmo da animação
+	-- (ViewmodelController); as outras tocam o som único de recarga
+	if not weapon.Sounds.MagOut then
+		AudioController.play(weapon.Sounds.Reload, nil, { Volume = 0.7 })
+	end
 end
 
 local function fire()
@@ -249,6 +253,15 @@ local function fire()
 			})
 		end
 		CombatEffects.playShot(weapon, muzzlePos, hits, true)
+		if weapon.Sounds.Layer then
+			AudioController.play(weapon.Sounds.Layer, nil, { Volume = 0.35, Vary = 0.06 })
+		end
+		if weapon.Sounds.Shell and rng:NextNumber() < 0.6 then
+			local shell = weapon.Sounds.Shell
+			task.delay(0.28 + rng:NextNumber() * 0.15, function()
+				AudioController.play(shell, nil, { Volume = 0.22, Vary = 0.15 })
+			end)
+		end
 		fireRemote:FireServer(weapon.Id, origin, direction, claimed, seed)
 		bloom = math.min(bloom + weapon.Spread.Bloom, weapon.Spread.BloomMax)
 		CameraController.addRecoil(recoil.Pitch, recoil.Yaw, recoil.Recovery)

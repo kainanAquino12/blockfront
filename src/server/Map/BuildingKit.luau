@@ -232,8 +232,8 @@ end
 	opts.Penthouse: altura da casa de escada acima da última laje
 	opts.Name: prefixo dos nomes dos elementos
 ]]
-function BuildingKit:stairCore(x0: number, z0: number, levels: { number }, opts: { Penthouse: number?, Name: string? }?)
-	local RC = "ReinforcedConcrete"
+function BuildingKit:stairCore(x0: number, z0: number, levels: { number }, opts: { Penthouse: number?, Name: string?, Material: string? }?)
+	local RC = (opts and opts.Material) or "ReinforcedConcrete" -- material das paredes (torres de pedra/tijolo)
 	local name = (opts and opts.Name) or "Nucleo"
 	local ph = opts and opts.Penthouse
 	local x1, z1 = x0 + 7, z0 + 13
@@ -326,6 +326,162 @@ function BuildingKit.swapXZ(def)
 		out.ElementOf = dst
 	end
 	return out
+end
+
+--[[
+	Bloco estrutural com fachada (V10). Monta, numa chamada, um volume de
+	vários andares com estrutura real e fachada:
+	  o.X, o.Z      linhas de pilares (2x2) em x e em z (a primeira e a última
+	                são o perímetro)
+	  o.Levels      alturas das lajes { y0, y1, ..., yN } (y0 = base, sem laje)
+	  o.Name        prefixo dos nomes dos elementos
+	  o.Wall        material da fachada (padrão "Brick")
+	  o.Win         "Ribbon" (fita), "Punched" (janelas recortadas em pares),
+	                "Tall" (janelas altas e estreitas) ou "None"
+	  o.Doors       { { face = "S"|"N"|"O"|"L", at = coordenada, w = largura } }
+	                portas no térreo (face S = z mínimo)
+	  o.Holes       { {x0, z0, x1, z1} } vãos sem laje (átrios, poços)
+	  o.Roof        true: platibanda na cobertura
+	  o.SkipFaces   { S = true, ... } faces sem fachada (coladas em outro volume)
+	Lajes, vigas e pilares entram no grafo estrutural como no Edifício Central.
+]]
+function BuildingKit:framedBlock(o)
+	local RC = "ReinforcedConcrete"
+	local X, Z, Lv = o.X, o.Z, o.Levels
+	local name = o.Name or "Bloco"
+	local wall = o.Wall or "Brick"
+	local win = o.Win or "Punched"
+	local skip = o.SkipFaces or {}
+	local function inHole(x0, z0, x1, z1)
+		for _, h in o.Holes or {} do
+			if x0 >= h[1] and x1 <= h[3] and z0 >= h[2] and z1 <= h[4] then
+				return true
+			end
+		end
+		return false
+	end
+	local n = #Lv - 1
+	for k = 2, #Lv do
+		local y = Lv[k]
+		for i = 1, #X - 1 do
+			for j = 1, #Z - 1 do
+				local x0, x1, z0, z1 = X[i] + 2, X[i + 1] - 1, Z[j] + 2, Z[j + 1] - 1
+				if not inHole(x0, z0, x1, z1) then
+					self:add("Slab", RC, x0, y, z0, x1, y, z1, ("%s_Laje_N%d_%d%d"):format(name, k - 1, i, j))
+				end
+			end
+		end
+		for j, c in Z do
+			for i = 1, #X - 1 do
+				self:add("Beam", RC, X[i] + 2, y - 1, c, X[i + 1] - 1, y, c + 1, ("%s_VigaX_N%d_%d_%d"):format(name, k - 1, j, i))
+			end
+		end
+		for i, c in X do
+			for j = 1, #Z - 1 do
+				self:add("Beam", RC, c, y - 1, Z[j] + 2, c + 1, y, Z[j + 1] - 1, ("%s_VigaZ_N%d_%d_%d"):format(name, k - 1, i, j))
+			end
+		end
+		for _, h in o.Holes or {} do
+			if k < #Lv then
+				self:carve(h[1], y - 1, h[2], h[3], y, h[4])
+			end
+		end
+	end
+	for f = 0, n - 1 do
+		for i, cx in X do
+			for j, cz in Z do
+				local y0 = if f == 0 then Lv[1] + 1 else Lv[f + 1]
+				self:add("Column", RC, cx, y0, cz, cx + 1, Lv[f + 2] - 1, cz + 1, ("%s_Pilar_%d%d_A%d"):format(name, i, j, f))
+			end
+		end
+	end
+	for i, cx in X do
+		for j, cz in Z do
+			self:add("Column", RC, cx, Lv[#Lv], cz, cx + 1, Lv[#Lv], cz + 1, ("%s_Pilar_%d%d_Topo"):format(name, i, j))
+		end
+	end
+	-- fachada por vão (entre pilares), em cada andar
+	local xs, xe, zs, ze = X[1], X[#X] + 1, Z[1], Z[#Z] + 1
+	local function facade(face: string, f: number, a: number, c: number)
+		local y0 = if f == 0 then Lv[1] + 1 else Lv[f + 1] + 1
+		local yt = Lv[f + 2] - 2
+		local tag = ("%s_Fachada_%s_A%d_%d"):format(name, face, f, a)
+		local alongX = face == "S" or face == "N"
+		local fixed = if face == "S" then zs elseif face == "N" then ze elseif face == "O" then xs else xe
+		local function box(kind, mat, u0, v0, u1, v1, nm)
+			if alongX then
+				return self:add(kind, mat, u0, v0, fixed, u1, v1, fixed, nm)
+			else
+				return self:add(kind, mat, fixed, v0, u0, fixed, v1, u1, nm)
+			end
+		end
+		local function cut(u0, v0, u1, v1)
+			if alongX then
+				self:carve(u0, v0, fixed, u1, v1, fixed)
+			else
+				self:carve(fixed, v0, u0, fixed, v1, u1)
+			end
+		end
+		box("Wall", wall, a, y0, c, yt, tag)
+		local function glass(u0, v0, u1, v1)
+			cut(u0, v0, u1, v1)
+			box("Glass", "TintedGlass", u0, v0, u1, v1, tag .. "_Vidro" .. u0)
+		end
+		if win == "Ribbon" then
+			if c - a >= 3 then
+				glass(a + 1, y0 + 2, c - 1, yt - 1)
+			end
+		elseif win == "Punched" then
+			for u = a + 1, c - 2, 4 do
+				glass(u, y0 + 2, math.min(u + 1, c - 1), y0 + 5)
+			end
+		elseif win == "Tall" then
+			for u = a + 1, c - 1, 3 do
+				glass(u, y0 + 1, u, yt - 1)
+			end
+		end
+		if f == 0 then
+			for _, d in o.Doors or {} do
+				if d.face == face and d.at >= a and d.at + (d.w or 3) - 1 <= c then
+					cut(d.at, y0, d.at + (d.w or 3) - 1, y0 + 6)
+				end
+			end
+		end
+	end
+	for f = 0, n - 1 do
+		for i = 1, #X - 1 do
+			if not skip.S then
+				facade("S", f, X[i] + 2, X[i + 1] - 1)
+			end
+			if not skip.N then
+				facade("N", f, X[i] + 2, X[i + 1] - 1)
+			end
+		end
+		for j = 1, #Z - 1 do
+			if not skip.O then
+				facade("O", f, Z[j] + 2, Z[j + 1] - 1)
+			end
+			if not skip.L then
+				facade("L", f, Z[j] + 2, Z[j + 1] - 1)
+			end
+		end
+	end
+	if o.Roof then
+		local yr = Lv[#Lv] + 1
+		local pm = o.RoofMaterial or "Concrete"
+		if not skip.S then
+			self:add("Wall", pm, xs, yr, zs, xe, yr + 1, zs, name .. "_Platibanda_S")
+		end
+		if not skip.N then
+			self:add("Wall", pm, xs, yr, ze, xe, yr + 1, ze, name .. "_Platibanda_N")
+		end
+		if not skip.O then
+			self:add("Wall", pm, xs, yr, zs + 1, xs, yr + 1, ze - 1, name .. "_Platibanda_O")
+		end
+		if not skip.L then
+			self:add("Wall", pm, xe, yr, zs + 1, xe, yr + 1, ze - 1, name .. "_Platibanda_L")
+		end
+	end
 end
 
 return BuildingKit

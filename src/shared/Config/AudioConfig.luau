@@ -38,6 +38,14 @@ AudioConfig.UI = {
 	Hitmarker = "rbxassetid://138148057831879",
 }
 
+-- Silêncio no começo de alguns arquivos (s): o som começa direto do ponto útil.
+-- Medido no Studio com PlaybackLoudness (V10).
+AudioConfig.StartOffsets = {
+	["rbxassetid://117963160131194"] = 0.3, -- MagReload / MagOut
+	["rbxassetid://117994408780527"] = 0.09, -- MagIn
+	["rbxassetid://106978376532259"] = 0.1, -- PistolReload
+}
+
 -- Limites para não empilhar sons (por categoria).
 AudioConfig.Categories = {
 	Shot = { MaxActive = 24, MaxDistance = 600, RollOffMin = 12 },

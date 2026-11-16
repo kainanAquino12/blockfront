@@ -11,6 +11,11 @@
 	- Limite de sons simultâneos por categoria: se estourar, o som novo é
 	  descartado em vez de empilhar (evita "parede de ruído" e custo).
 	- Sons do próprio jogador (arma na mão, interface) tocam em 2D.
+	- V10, LATÊNCIA: todos os sons do jogo são pré-carregados ao entrar
+	  (ContentProvider:PreloadAsync) e cada som tocado é um CLONE de um modelo
+	  já carregado. Antes, cada tiro criava um Sound novo ainda não carregado
+	  e o som saía 350 a 880 ms atrasado; agora sai em ~1 quadro.
+	- StartOffsets pula o silêncio inicial de alguns arquivos.
 ]]
 
 local SoundService = game:GetService("SoundService")
@@ -18,6 +23,22 @@ local Debris = game:GetService("Debris")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local AudioConfig = require(ReplicatedStorage.Shared.Config.AudioConfig)
+local ContentProvider = game:GetService("ContentProvider")
+
+local templates: { [string]: Sound } = {}
+local templateFolder: Folder
+
+local function template(id: string): Sound
+	local t = templates[id]
+	if not t then
+		t = Instance.new("Sound")
+		t.SoundId = id
+		t.Volume = 0
+		t.Parent = templateFolder
+		templates[id] = t
+	end
+	return t
+end
 
 local AudioController = {}
 
@@ -75,9 +96,9 @@ function AudioController.play(soundId: string?, position: Vector3?, opts: PlayOp
 		return nil
 	end
 
-	local sound = Instance.new("Sound")
-	sound.SoundId = soundId
+	local sound = template(soundId):Clone()
 	sound.Volume = o.Volume or 0.8
+	sound.TimePosition = AudioConfig.StartOffsets[soundId] or 0
 	local speed = o.Speed or 1
 	if o.Vary then
 		speed *= 1 + rng:NextNumber(-o.Vary, o.Vary)
@@ -119,8 +140,33 @@ function AudioController.pick(list: { string }?): string?
 	return list[rng:NextInteger(1, #list)]
 end
 
+-- Pré-carrega uma lista de IDs (strings ou tabelas aninhadas).
+function AudioController.preload(source: any)
+	local list: { Instance } = {}
+	local function collect(v)
+		if type(v) == "string" and string.find(v, "rbxasset") then
+			table.insert(list, template(v))
+		elseif type(v) == "table" then
+			for _, x in v do
+				collect(x)
+			end
+		end
+	end
+	collect(source)
+	task.spawn(function()
+		pcall(function()
+			ContentProvider:PreloadAsync(list)
+		end)
+	end)
+end
+
 function AudioController.init()
+	templateFolder = Instance.new("Folder")
+	templateFolder.Name = "SoundTemplates"
+	templateFolder.Parent = SoundService
 	makeGroups()
+	AudioController.preload(AudioConfig)
+	AudioController.preload(require(ReplicatedStorage.Shared.Config.WeaponConfig).Sounds)
 	SoundService.AmbientReverb = Enum.ReverbType.City
 	SoundService.RolloffScale = 1
 end

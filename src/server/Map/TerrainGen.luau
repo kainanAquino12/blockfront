@@ -23,7 +23,7 @@
 
 local TerrainGen = {}
 
-TerrainGen.HalfX = 480 -- V6: expandido para oeste (porto) e leste (subúrbio)
+TerrainGen.HalfX = 640 -- V10: 1280 x 880 (ferrovia a oeste, hospital a leste)
 TerrainGen.HalfZ = 440
 TerrainGen.Floor = -16 -- fundo do terreno
 
@@ -53,6 +53,12 @@ TerrainGen.Pads = {
 	Military = { 196, 0, 272, 44, 26, 26 },
 	Port = { -480, 0, -386, 172, 1, 16 }, -- V6: pátio do porto, além do canal
 	Suburb = { 352, 0, 470, 262, 5, 30 }, -- V6: planície do subúrbio a leste
+	-- V10
+	Railway = { -640, 0, -540, 70, 1, 16 }, -- estação ferroviária (sobre o eixo)
+	Rail = { -640, 0, -600, 440, 1, 10 }, -- faixa dos trilhos (mapa inteiro)
+	Hospital = { 540, 0, 640, 46, 6, 20 },
+	Church = { 410, 244, 456, 304, 5, 14 },
+	School = { -336, 210, -270, 276, 4, 14 },
 }
 
 -- Estradas: polilinhas { {x, |z|}, ... } (meio mapa; a outra metade é espelhada).
@@ -65,9 +71,10 @@ TerrainGen.Roads = {
 	{ Name = "AnelSul", Width = 12, Points = { { -150, 126 }, { 78, 126 } } },
 	{ Name = "AcessoBase", Width = 14, Points = { { -60, 330 }, { 60, 330 } } },
 	-- V6
-	{ Name = "Porto", Width = 14, Points = { { -170, 150 }, { -480, 150 } } },
+	{ Name = "Porto", Width = 14, Points = { { -170, 150 }, { -480, 150 }, { -556, 150 }, { -556, 60 } } },
+	{ Name = "Escola", Width = 10, Points = { { -170, 240 }, { -262, 240 } } },
 	{ Name = "PortoSul", Width = 12, Points = { { -170, 300 }, { -480, 300 } } },
-	{ Name = "LesteSuburbio", Width = 12, Points = { { 272, 0 }, { 330, 24 }, { 474, 24 } } },
+	{ Name = "LesteSuburbio", Width = 12, Points = { { 272, 0 }, { 330, 24 }, { 474, 24 }, { 540, 24 } } },
 	{ Name = "RuaSuburbio", Width = 12, Points = { { 404, 24 }, { 404, 330 } } },
 	{ Name = "MorroSuburbio", Width = 10, Points = { { 70, 300 }, { 250, 330 }, { 404, 330 } } },
 }
@@ -221,8 +228,12 @@ function TerrainGen.sample(x: number, z: number): (number, string)
 	local kind = "Natural"
 	if pad == "Center" or pad == "Base" then
 		kind = "Urban"
-	elseif pad == "Industry" or pad == "Military" or pad == "Port" then
+	elseif pad == "Industry" or pad == "Military" or pad == "Port" or pad == "Railway" or pad == "Rail" then
 		kind = "Yard"
+	elseif pad == "Hospital" then
+		kind = "Urban"
+	elseif pad == "Church" or pad == "School" then
+		kind = "Lot" -- terra batida (sem vegetação)
 	end
 	if math.abs(x - TerrainGen.Canal.X) < TerrainGen.Canal.HalfWidth then
 		kind = "Canal"
@@ -304,6 +315,8 @@ local function materialFor(kind: string, slope: number, x: number, z: number): E
 		return Enum.Material.Concrete
 	elseif kind == "Valley" or kind == "Canal" then
 		return Enum.Material.Mud
+	elseif kind == "Lot" then
+		return Enum.Material.Ground
 	end
 	if slope > 0.55 then
 		return Enum.Material.Rock

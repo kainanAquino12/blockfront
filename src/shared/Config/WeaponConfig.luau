@@ -50,6 +50,10 @@ local SND = {
 	Dry = "rbxassetid://136577938825060",
 	GrenadePin = "rbxassetid://9114659833",
 	Swing = "rbxassetid://76909623649227",
+	-- V10 (Creator Store, gratuitos; medidos: começam em < 70 ms depois de pré-carregados)
+	CrackLayer = "rbxassetid://86298841850357", -- estalo curto por cima do disparo (rifle/LMG)
+	Shell = "rbxassetid://9113631210", -- cápsula caindo (Pro Sound Effects, licenciado pela Roblox)
+	ShellBounce = "rbxassetid://89036504640264",
 }
 
 local WeaponConfig = {}
@@ -74,7 +78,7 @@ WeaponConfig.Weapons = {
 		Recoil = { Pitch = 0.5, Yaw = 0.22, Kick = 0.35, Recovery = 7 },
 		WalkMultiplier = 1,
 		Viewmodel = { Scale = 0.36, Hip = CFrame.new(0.4232, -0.45, -1) * CFrame.Angles(0, rad(3), rad(-2)), AimDistance = 0.95, AimFov = 62, AimSensitivity = 0.75, EquipTime = 0.4 },
-		Sounds = { Fire = SND.RifleFire, Reload = SND.MagReload, Equip = SND.MagIn, Dry = SND.Dry },
+		Sounds = { Fire = SND.RifleFire, Reload = SND.MagReload, Equip = SND.MagIn, Dry = SND.Dry, Layer = SND.CrackLayer, Shell = SND.Shell, MagOut = SND.MagReload, MagIn = SND.MagIn, Charge = SND.Bolt },
 	},
 	SMG = {
 		Id = "SMG",
@@ -94,7 +98,7 @@ WeaponConfig.Weapons = {
 		Recoil = { Pitch = 0.32, Yaw = 0.32, Kick = 0.25, Recovery = 8 },
 		WalkMultiplier = 1.06,
 		Viewmodel = { Scale = 0.38, Hip = CFrame.new(0.4048, -0.432, -0.88) * CFrame.Angles(0, rad(3), rad(-2)), AimDistance = 0.85, AimFov = 66, AimSensitivity = 0.8, EquipTime = 0.3 },
-		Sounds = { Fire = SND.SmgFire, Reload = SND.MagReload, Equip = SND.MagIn, Dry = SND.Dry },
+		Sounds = { Fire = SND.SmgFire, Reload = SND.MagReload, Equip = SND.MagIn, Dry = SND.Dry, Shell = SND.ShellBounce, MagOut = SND.MagReload, MagIn = SND.MagIn, Charge = SND.Bolt },
 	},
 	LMG = {
 		Id = "LMG",
@@ -114,7 +118,7 @@ WeaponConfig.Weapons = {
 		Recoil = { Pitch = 0.42, Yaw = 0.42, Kick = 0.4, Recovery = 6 },
 		WalkMultiplier = 0.85,
 		Viewmodel = { Scale = 0.32, Hip = CFrame.new(0.4416, -0.486, -1.04) * CFrame.Angles(0, rad(3), rad(-2)), AimDistance = 1.0, AimFov = 62, AimSensitivity = 0.7, EquipTime = 0.6 },
-		Sounds = { Fire = SND.LmgFire, Reload = SND.MagReload, Equip = SND.MagIn, Dry = SND.Dry },
+		Sounds = { Fire = SND.LmgFire, Reload = SND.MagReload, Equip = SND.MagIn, Dry = SND.Dry, Layer = SND.CrackLayer, Shell = SND.Shell, MagOut = SND.MagReload, MagIn = SND.MagIn, Charge = SND.Bolt },
 	},
 	Sniper = {
 		Id = "Sniper",
@@ -134,7 +138,7 @@ WeaponConfig.Weapons = {
 		Recoil = { Pitch = 3.2, Yaw = 0.6, Kick = 1.2, Recovery = 5 },
 		WalkMultiplier = 0.92,
 		Viewmodel = { Scale = 0.32, Hip = CFrame.new(0.4232, -0.468, -1) * CFrame.Angles(0, rad(3), rad(-2)), AimDistance = 0.6, AimFov = 18, AimSensitivity = 0.3, EquipTime = 0.55, Scope = true },
-		Sounds = { Fire = SND.SniperFire, Reload = SND.MagReload, Equip = SND.Bolt, Cycle = SND.Bolt, Dry = SND.Dry },
+		Sounds = { Fire = SND.SniperFire, Reload = SND.MagReload, Equip = SND.Bolt, Cycle = SND.Bolt, Dry = SND.Dry, Shell = SND.Shell, MagOut = SND.MagReload, MagIn = SND.MagIn },
 	},
 	Shotgun = {
 		Id = "Shotgun",
@@ -176,7 +180,7 @@ WeaponConfig.Weapons = {
 		Recoil = { Pitch = 1.0, Yaw = 0.3, Kick = 0.5, Recovery = 8 },
 		WalkMultiplier = 1.06,
 		Viewmodel = { Scale = 0.42, Hip = CFrame.new(0.3128, -0.378, -0.84) * CFrame.Angles(0, rad(3), 0), AimDistance = 1.0, AimFov = 70, AimSensitivity = 0.85, EquipTime = 0.25 },
-		Sounds = { Fire = SND.PistolFire, Reload = SND.PistolReload, Equip = SND.MagIn, Dry = SND.Dry },
+		Sounds = { Fire = SND.PistolFire, Reload = SND.PistolReload, Equip = SND.MagIn, Dry = SND.Dry, Shell = SND.ShellBounce, MagOut = SND.MagReload, MagIn = SND.MagIn },
 	},
 	RocketLauncher = {
 		Id = "RocketLauncher",

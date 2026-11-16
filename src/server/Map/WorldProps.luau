@@ -245,6 +245,75 @@ function WorldProps.rock(parent: Instance, cf: CFrame, scale: number, seed: numb
 	return m
 end
 
+---------------------------------------------------------------------------
+-- Ferrovia (V10)
+---------------------------------------------------------------------------
+
+-- Trilho ao longo de z (lastro de brita + 2 trilhos + dormentes a cada 6).
+function WorldProps.railTrack(parent: Instance, x: number, y: number, z0: number, z1: number)
+	local m = model(parent, "Trilho")
+	local len = z1 - z0
+	local cz = (z0 + z1) / 2
+	part(m, "Lastro", Vector3.new(6, 0.5, len), CFrame.new(x, y + 0.25, cz), Color3.fromRGB(92, 88, 82), Enum.Material.Slate)
+	for z = z0 + 2, z1 - 2, 6 do
+		part(m, "Dormente", Vector3.new(5, 0.3, 0.8), CFrame.new(x, y + 0.6, z), Color3.fromRGB(78, 62, 48), Enum.Material.Wood)
+	end
+	for _, s in { -1.45, 1.45 } do
+		part(m, "Trilho", Vector3.new(0.3, 0.35, len), CFrame.new(x + s, y + 0.92, cz), Color3.fromRGB(96, 92, 88), Enum.Material.Metal)
+	end
+	return m
+end
+
+-- Vagão de carga (fechado ou plataforma com carga), cor desbotada.
+function WorldProps.wagon(parent: Instance, cf: CFrame, kind: string, seed: number)
+	local rng = Random.new(seed)
+	local m = model(parent, "Vagao")
+	local colors = { Color3.fromRGB(104, 62, 48), Color3.fromRGB(76, 84, 70), Color3.fromRGB(90, 92, 96) }
+	local c = colors[rng:NextInteger(1, #colors)]
+	part(m, "Chassi", Vector3.new(3.6, 0.6, 22), cf * CFrame.new(0, 1.9, 0), C.Burnt, Enum.Material.Metal)
+	for _, z in { -7.5, 7.5 } do
+		part(m, "Truque", Vector3.new(3, 1.1, 3.6), cf * CFrame.new(0, 1.1, z), C.Burnt, Enum.Material.DiamondPlate)
+	end
+	if kind == "Box" then
+		part(m, "Caixa", Vector3.new(4.2, 4.6, 21), cf * CFrame.new(0, 4.5, 0), c, Enum.Material.CorrodedMetal)
+		part(m, "Teto", Vector3.new(4.4, 0.3, 21.4), cf * CFrame.new(0, 6.9, 0), c:Lerp(Color3.new(0, 0, 0), 0.25), Enum.Material.Metal)
+		part(m, "Porta", Vector3.new(0.15, 3.8, 5), cf * CFrame.new(2.15, 4.3, 0), c:Lerp(Color3.new(0, 0, 0), 0.15), Enum.Material.DiamondPlate)
+	else
+		part(m, "Prancha", Vector3.new(4.2, 0.4, 21), cf * CFrame.new(0, 2.4, 0), C.Wood, Enum.Material.WoodPlanks)
+		-- carga: caixas militares amarradas
+		for _, z in { -6, 0, 6 } do
+			part(m, "Carga", Vector3.new(3.6, 2.2, 4.4), cf * CFrame.new(0, 3.7, z), C.Olive, Enum.Material.Fabric)
+		end
+	end
+	return m
+end
+
+-- Fogo + fumaça (prédios atingidos). Sem luz forte, só o efeito.
+function WorldProps.fire(parent: Instance, pos: Vector3, size: number)
+	local p = part(parent, "Incendio", Vector3.new(2, 0.2, 2), CFrame.new(pos), Color3.new(0, 0, 0), Enum.Material.SmoothPlastic)
+	p.Transparency = 1
+	p.CanCollide = false
+	p.CanQuery = false
+	local f = Instance.new("Fire")
+	f.Size = size
+	f.Heat = 9
+	f.Color = Color3.fromRGB(236, 120, 50)
+	f.SecondaryColor = Color3.fromRGB(150, 40, 20)
+	f.Parent = p
+	local s = Instance.new("Smoke")
+	s.Color = Color3.fromRGB(46, 44, 42)
+	s.Opacity = 0.35
+	s.RiseVelocity = 10
+	s.Size = 14
+	s.Parent = p
+	local l = Instance.new("PointLight")
+	l.Color = Color3.fromRGB(255, 140, 60)
+	l.Range = 18
+	l.Brightness = 1.2
+	l.Parent = p
+	return p
+end
+
 -- Pasta de categoria dentro do cenário estático (UrbanInfrastructure, ...).
 function WorldProps.folder(static: Instance, name: string): Instance
 	local f = static:FindFirstChild(name)
