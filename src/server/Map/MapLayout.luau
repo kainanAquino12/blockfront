@@ -33,6 +33,8 @@ local Industrial = require(script.Parent.Buildings.ComplexoIndustrial)
 local QGMilitar = require(script.Parent.Buildings.QGMilitar)
 local Residencial = require(script.Parent.Buildings.EdificioResidencial)
 local Porto = require(script.Parent.Buildings.Porto)
+local Sec = require(script.Parent.Buildings.Secundarias)
+local WorldProps = require(script.Parent.WorldProps)
 
 ---------------------------------------------------------------------------
 -- Entulho estático (clima de combate): blocos de concreto e tijolo caídos.
@@ -69,7 +71,7 @@ local function rubblePile(ctx, x: number, z: number, radius: number, count: numb
 		p.CFrame = ctx.cf(0, 0, 0) * cf -- ctx.cf espelha no lado vermelho
 		p.Parent = model
 	end
-	model.Parent = ctx.static
+	model.Parent = WorldProps.folder(ctx.static, "RuinsAndDebris")
 	return model
 end
 
@@ -91,7 +93,7 @@ local function smoke(ctx, x: number, y: number, z: number)
 	s.Size = 14
 	s.TimeScale = 0.6
 	s.Parent = p
-	p.Parent = ctx.static
+	p.Parent = WorldProps.folder(ctx.static, "RuinsAndDebris")
 end
 local M = StructureKit.Materials
 
@@ -219,10 +221,163 @@ local function buildExpansion(ctx)
 	smoke(ctx, -27, 92, -97)
 end
 
+---------------------------------------------------------------------------
+-- V7: mundo mais completo (construções secundárias, infraestrutura, props)
+-- Tudo no referencial azul (z < 0); o MapManager espelha para o vermelho.
+---------------------------------------------------------------------------
+
+local function gy(x: number, z: number): number
+	return math.floor(TerrainGen.height(x, z) + 0.5)
+end
+
+-- Áreas onde não nasce vegetação/rocha (construções e estradas já filtradas pelo tipo do chão).
+local NO_PLANT = {
+	{ -104, -236, -78, -214 }, -- celeiro
+	{ 140, -110, 165, -80 }, { 278, -145, 302, -115 }, -- torres
+	{ 195, -90, 275, -60 }, -- bunkers
+}
+local function freeSpot(x: number, z: number): boolean
+	local _, kind = TerrainGen.sample(x, z)
+	if kind ~= "Natural" then
+		return false
+	end
+	for _, r in NO_PLANT do
+		if x >= r[1] and x <= r[3] and z >= r[2] and z <= r[4] then
+			return false
+		end
+	end
+	return true
+end
+
+local function scatter(ctx, folderName: string, region, count: number, seed: number, make)
+	local f = WorldProps.folder(ctx.static, folderName)
+	local rng = Random.new(seed)
+	local placed, tries = 0, 0
+	while placed < count and tries < count * 12 do
+		tries += 1
+		local x = rng:NextNumber(region[1], region[3])
+		local z = rng:NextNumber(region[2], region[4])
+		if freeSpot(x, z) then
+			placed += 1
+			make(f, ctx.cf(x, TerrainGen.height(x, z) - 0.3, z, rng:NextNumber(0, 360)), seed * 1000 + placed)
+		end
+	end
+end
+
+local function buildCityBlocks(ctx)
+	-- centro comercial (frente para a praça) e posto de combustível no anel
+	ctx.struct("CentroComercial", 9, -88, BuildingKit.flipZ(Sec.centroComercial()), CENTER_Y)
+	ctx.struct("PostoCombustivel", 44, -122, Sec.posto(), CENTER_Y)
+	ctx.struct("Praca_Barreira1", -40, -40, StructureKit.barrier(6), CENTER_Y)
+	ctx.struct("Praca_Barreira2", 14, -44, StructureKit.barrier(6), CENTER_Y)
+	ctx.yield()
+
+	local urban = WorldProps.folder(ctx.static, "UrbanInfrastructure")
+	-- postes de iluminação ao longo da avenida e do anel sul
+	for z = -40, -320, -24 do
+		if math.abs(z + 185) > 22 then -- não sobre a ponte
+			WorldProps.streetLamp(urban, ctx.cf(-11.5, gy(-11.5, z), z, 90))
+			WorldProps.streetLamp(urban, ctx.cf(11.5, gy(11.5, z + 12), z + 12, -90))
+		end
+	end
+	for x = -140, 70, 26 do
+		if math.abs(x) > 14 then
+			WorldProps.streetLamp(urban, ctx.cf(x, gy(x, -119), -119, 180))
+		end
+	end
+	-- semáforos no cruzamento avenida x anel sul
+	WorldProps.trafficLight(urban, ctx.cf(10.5, gy(10, -117), -117, -90))
+	WorldProps.trafficLight(urban, ctx.cf(-10.5, gy(-10, -135), -135, 90))
+	-- placas
+	for _, sgn in { { -14, -150, 90, true }, { 14, -100, -90, false }, { -60, -132, 0, false }, { 80, -10, 90, true }, { -165, -160, 0, true } } do
+		WorldProps.roadSign(urban, ctx.cf(sgn[1], gy(sgn[1], sgn[2]), sgn[2], sgn[3]), sgn[4])
+	end
+	-- bueiros na avenida
+	for z = -30, -300, -45 do
+		WorldProps.manhole(urban, ctx.cf(4, gy(4, z), z))
+	end
+	-- linha elétrica ao longo da avenida, nos campos (postes a cada 30)
+	local prev: Vector3? = nil
+	for z = -140, -330, -30 do
+		local top = WorldProps.powerPole(urban, ctx.cf(20, gy(20, z), z))
+		if prev then
+			WorldProps.wire(urban, prev, top)
+		end
+		prev = top
+	end
+end
+
+local function buildIndustry(ctx)
+	ctx.struct("DepositoTijolo", -306, -124, Sec.deposito(), 0)
+	ctx.struct("ParqueTanques", -262, -142, Sec.parqueTanques(), 0)
+	-- cerca de concreto com portão grande na entrada pela estrada industrial
+	ctx.struct("Industria_Portao", -184, -150, StructureKit.gateWall(24, 6, M.Concrete, M.Military), 0)
+	ctx.struct("Industria_Muro1", -230, -150, StructureKit.wall(40, 4, 1, M.Concrete, M.Military, false), 0)
+	ctx.struct("Industria_Muro2", -312, -150, StructureKit.wall(36, 4, 1, M.Concrete, M.Military, false), 0)
+	ctx.yield()
+	local ind = WorldProps.folder(ctx.static, "IndustrialProps")
+	WorldProps.pipeRack(ind, ctx.pos(-232, 0, -110), ctx.pos(-232, 0, -48), 7)
+	WorldProps.pipeRack(ind, ctx.pos(-262, 0, -60), ctx.pos(-216, 0, -60), 7)
+	for k, c in { { -196, -70, 2 }, { -186, -70, 3 }, { -196, -95, 1 }, { -290, -70, 2 } } do
+		WorldProps.containerStack(ind, ctx.cf(c[1], 0, c[2], 90), c[3], 70 + k)
+	end
+	WorldProps.generator(ind, ctx.cf(-180, 0, -24, 0))
+	WorldProps.generator(ind, ctx.cf(-276, 0, -95, 90))
+	-- porto: geradores e contêineres extras no pátio
+	WorldProps.containerStack(ind, ctx.cf(-410, 1, -110, 0), 3, 81)
+	WorldProps.containerStack(ind, ctx.cf(-440, 1, -150, 90), 2, 82)
+end
+
+local function buildPeriphery(ctx)
+	-- subúrbio: oficina mecânica
+	ctx.struct("Suburbio_Oficina", 359, -193, Sec.oficina(), gy(373, -181))
+	-- campos: celeiro abandonado
+	ctx.struct("Campo_Celeiro", -101, -233, Sec.celeiro(), gy(-90, -225))
+	ctx.yield()
+
+	-- cume e militar: torres de observação, bunkers, sacos de areia
+	ctx.struct("Trincheira_Torre1", 146, -100, StructureKit.watchtower(), gy(150, -96))
+	ctx.struct("Trincheira_Torre2", 284, -134, StructureKit.watchtower(), gy(288, -130))
+	ctx.struct("Trincheira_Bunker1", 200, -84, StructureKit.bunker(10, 8), gy(205, -80))
+	ctx.struct("Trincheira_Bunker2", 256, -84, StructureKit.bunker(10, 8), gy(261, -80))
+	ctx.struct("Trincheira_Sacos2", 222, -70, StructureKit.sandbags(12, 3), gy(228, -70))
+	ctx.yield()
+
+	local mil = WorldProps.folder(ctx.static, "MilitaryProps")
+	WorldProps.wreckTank(mil, ctx.cf(62, gy(62, -205), -205, 35))
+	WorldProps.wreckTank(mil, ctx.cf(-150, gy(-150, -186), -186, -60))
+	WorldProps.wreckTank(mil, ctx.cf(332, gy(332, -44), -44, 110))
+	WorldProps.wreckTruck(mil, ctx.cf(-58, gy(-58, -292), -292, 15))
+	WorldProps.wreckTruck(mil, ctx.cf(424, gy(424, -62), -62, 80))
+	local hedge = require(script.Parent.PropKit)
+	for _, h in { { 300, -18 }, { 306, -30 }, { 312, -16 }, { 120, -132 }, { 128, -138 }, { -168, -205 }, { -176, -210 } } do
+		hedge.hedgehog(mil, ctx.cf(h[1], gy(h[1], h[2]), h[2], h[1] % 45))
+	end
+	rubblePile(ctx, 62, -212, 6, 10, 31)
+	rubblePile(ctx, 332, -50, 6, 10, 32)
+
+	-- ambiente: árvores, arbustos e rochas (campos, cume e subúrbio)
+	scatter(ctx, "EnvironmentalProps", { -320, -330, 300, -140 }, 34, 41, WorldProps.tree)
+	scatter(ctx, "EnvironmentalProps", { 330, -330, 470, -60 }, 10, 42, WorldProps.tree)
+	scatter(ctx, "EnvironmentalProps", { -320, -330, 470, -140 }, 50, 43, WorldProps.bush)
+	scatter(ctx, "EnvironmentalProps", { 110, -300, 330, -20 }, 26, 44, function(f, cf, sd)
+		WorldProps.rock(f, cf, 2 + (sd % 3), sd)
+	end)
+	scatter(ctx, "EnvironmentalProps", { -320, -330, 100, -150 }, 12, 45, function(f, cf, sd)
+		WorldProps.rock(f, cf, 1.5, sd)
+	end)
+end
+
 function MapLayout.buildSide(ctx)
 	buildTower(ctx)
 	ctx.yield()
 	buildExpansion(ctx)
+	ctx.yield()
+	buildCityBlocks(ctx)
+	ctx.yield()
+	buildIndustry(ctx)
+	ctx.yield()
+	buildPeriphery(ctx)
 	ctx.yield()
 	buildBase(ctx)
 	ctx.yield()

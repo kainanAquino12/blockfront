@@ -103,3 +103,11 @@ Novos: `Buildings/EdificioResidencial.luau` (com opções Floors/Wall/Damaged), 
 Modificados: `TerrainGen` (x ±480, canal com água, porto, subúrbio, crateras, estradas), `MapLayout` (expansão, entulho, fumaça),
 `MapManager` (iluminação de zona de guerra, pastas por distrito), `UIController` (espera o Match por até 120 s:
 o servidor leva ~5 s para gerar o terreno grande).
+
+
+## 2026-11-16 — V7: mundo mais completo
+
+Detalhes em `docs/MAPA_V5.md` (seção V7). Novos: `Buildings/Secundarias.luau` (centro comercial, posto, oficina,
+depósito, parque de tanques, celeiro), `WorldProps.luau` (postes, semáforos, placas, fiação, bueiros, geradores,
+tubulações, contêineres, veículos destruídos, árvores, arbustos, rochas). `MapLayout`: buildCityBlocks, buildIndustry,
+buildPeriphery; entulho/fumaça em RuinsAndDebris. `MapManager`: distritos atualizados.

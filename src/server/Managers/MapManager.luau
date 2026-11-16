@@ -265,8 +265,8 @@ local propsBuilt = false
 ]]
 local DISTRICTS = {
 	{ "Map_Bridges", { "Ponte" } },
-	{ "Map_CentralDistrict", { "Torre", "Edificio", "PredioAbandonado" } },
-	{ "Map_IndustrialZone", { "Industrial", "Porto" } },
+	{ "Map_CentralDistrict", { "Torre", "Edificio", "PredioAbandonado", "CentroComercial", "Posto", "Praca" } },
+	{ "Map_IndustrialZone", { "Industria", "Porto", "Deposito", "ParqueTanques" } },
 	{ "Map_SuburbsAndTrenches", { "Suburbio", "Trincheira", "QG", "Campo" } },
 	{ "Map_SpawnAndObjectives", { "Base" } },
 }

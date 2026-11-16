@@ -115,3 +115,31 @@ A pasta-mãe não foi renomeada porque o combate e a destruição procuram por e
 7. Destruição: nenhum elemento sem apoio no projeto em nenhuma construção nova; colapso testado no Residencial.
 
 Pendências: teste com 2+ jogadores; FPS do cliente fora do Studio; pontes do canal e porto não foram derrubados em teste.
+
+
+---
+
+## V7: mundo mais completo (2026-11-16)
+
+Nada foi removido; tudo é espelhado para os dois times (exceto o que fica sobre z = 0).
+
+| Região | Construções novas (destrutíveis, com estrutura) | Objetos estáticos |
+|---|---|---|
+| Centro | Centro comercial 2 andares (x 12..55, z ±53..±84), posto de combustível (x 44..75, z ±93..±122), 2 barreiras na praça | postes de iluminação (avenida e anel), semáforos, placas, bueiros, linha elétrica com fiação |
+| Indústria | Depósito de tijolo com telhado em dente de serra (x -306..-275), parque de 3 tanques com dique (x -262..-201, z ±111..±140), portão grande e muros de concreto em z ±150 | pórticos de tubulação, pilhas de contêineres, geradores |
+| Periferia | Oficina mecânica no subúrbio (x 360..386, z ±169..±190), celeiro abandonado no campo (x -100..-80) | árvores (copa irregular ~12 studs), arbustos, rochas |
+| Cume / militar | 2 torres de observação, 2 bunkers, sacos de areia | 3 tanques destruídos, 2 caminhões destruídos, ouriços antiveículo, entulho |
+
+Pastas: `Workspace.MapProps.{UrbanInfrastructure, IndustrialProps, MilitaryProps, EnvironmentalProps, RuinsAndDebris}`;
+construções em `Workspace.DestructibleObjects.Map_*` (por distrito).
+Código: `server/Map/Buildings/Secundarias.luau`, `server/Map/WorldProps.luau`, `MapLayout` (buildCityBlocks, buildIndustry, buildPeriphery).
+
+### Validação (Studio)
+
+- Nenhum elemento sem apoio no projeto (corrigidos telhados do depósito e do celeiro).
+- A, B e C capturam; spawn azul ok.
+- 264 objetos de ambiente checados: 0 flutuando.
+- Entrei no centro comercial pela porta da loja com teclado real.
+- Destruição: portão da indústria quebra; tirar a parede portante oeste do depósito derruba as vigas e o telhado daquele lado (6 de 22 elementos); tirar 2 pilares da cobertura do posto derruba a viga daquele lado.
+- Desempenho: ~21,7 mil Parts no total (+1,9 mil de objetos estáticos, +1,4 mil das construções novas); servidor ocioso 16,7 ms.
+- Não verificado: prints de dentro dos prédios (a janela do Studio parou de renderizar no fim do teste), 2+ jogadores.
